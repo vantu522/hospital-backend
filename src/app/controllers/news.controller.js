@@ -3,7 +3,14 @@ import News from '../../models/news.model.js';
 const newsController = {
   createNews: async (req, res) => {
     try {
-      const news = new News(req.body);
+      const imageUrl = req.file?.path || ''; // Cloudinary trả về lin
+       const newsData = {
+        ...req.body,
+        hinhAnh: imageUrl,
+        luotXem: 0,
+        ngayDang: req.body.ngayDang ? new Date(req.body.ngayDang) : new Date(),
+      };
+      const news = new News(newsData);
       await news.save();
       res.status(201).json(news);
     } catch (err) {
