@@ -4,11 +4,11 @@ const Contact = createModel(
     'Contact',
     'contacts',
     {
-        full_name:{
+        hoTen:{
             type:String,
             required:true,
         },
-        phone_number:{
+        soDienThoai:{
             type:String,
             required:true,
         },
@@ -16,7 +16,7 @@ const Contact = createModel(
             type:String,
             required:true,
         },
-        message:{
+        loiNhan:{
             type:String,
             required:true,
         }
