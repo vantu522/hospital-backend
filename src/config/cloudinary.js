@@ -1,6 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { CLOUD_API_KEY, CLOUD_API_SECRET, CLOUD_NAME } from './constants.js';
 
 cloudinary.config({
   cloud_name: "dvzobnndv",
@@ -12,7 +11,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'hospital_images', 
-    allowed_formats: ['jpg', 'png', 'jpeg'],
+    allowed_formats: [  'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp', 'tiff', 'ico'],
   },
 });
 
