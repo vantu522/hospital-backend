@@ -2,7 +2,12 @@ import Doctor from "../../models/doctor.model.js";
 
 export const createDoctor = async (req, res) => {
   try {
-    const doctor = new Doctor(req.body);
+    const avatarFile = req.files?.avatar?.[0];
+    const doctorData = {
+      ...req.body,
+      avatar: avatarFile?.path || '', // Link từ Cloudinary
+    }
+    const doctor = new Doctor(doctorData);
     await doctor.save();
     res.status(201).json(doctor);
   } catch (err) {

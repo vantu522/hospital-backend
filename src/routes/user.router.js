@@ -9,9 +9,6 @@ const userRouter = Router();
 userRouter.get('/', userController.getUsers);
 userRouter.post('/', userController.createUser);
 
-userRouter.post('/contact', validate(createContact) ,contactController.createContact);
-userRouter.get('/contact', contactController.getAllContacts);
-userRouter.delete('/contact/:id', contactController.deleteContact);
-userRouter.delete('/contact', contactController.deleteAllContacts);
+
 
 export default userRouter;

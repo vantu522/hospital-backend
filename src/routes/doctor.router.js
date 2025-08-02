@@ -1,11 +1,17 @@
 import { Router } from 'express';
-import * as doctorCtrl from '../app/controllers/doctor.controller.js';
+import * as doctorController from '../app/controllers/doctor.controller.js';
+import upload from '../app/middlewares/upload.js';
+
 const doctorRouter = Router();
 
-doctorRouter.post('/', doctorCtrl.createDoctor);
-doctorRouter.get('/', doctorCtrl.getAllDoctors);
-doctorRouter.get('/:id', doctorCtrl.getDoctorById);
-doctorRouter.put('/:id', doctorCtrl.updateDoctor);
-doctorRouter.delete('/:id', doctorCtrl.deleteDoctor);
+doctorRouter.post('/',upload.fields([
+    { name: 'avatar', maxCount: 1 }
+]), doctorController.createDoctor);
+doctorRouter.get('/', doctorController.getAllDoctors);
+doctorRouter.get('/:id', doctorController.getDoctorById);
+doctorRouter.put('/:id', upload.fields([
+    { name: 'avatar', maxCount: 1 }
+]) ,doctorController.updateDoctor);
+doctorRouter.delete('/:id', doctorController.deleteDoctor);
 
 export default doctorRouter;

@@ -3,7 +3,11 @@ import Specialty from '../../models/specialty.model.js';
 const specialtyController = {
   createSpecialty: async (req, res) => {
     try {
-      const specialty = new Specialty(req.body);
+      const specialtyData = {
+        ...req.body,
+        images: req.files?.images ? req.files.images.map(file => file.path) : [],
+      }
+      const specialty = new Specialty(specialtyData);
       await specialty.save();
       res.status(201).json(specialty);
     } catch (err) {

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const serviceSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  specialties: { type: String, required: true },
   description: { type: String, required: false },
   avatar: { type: String, required: false },
   images: [{ type: String }],
