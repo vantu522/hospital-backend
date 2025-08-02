@@ -1,5 +1,5 @@
 import Service from '../../models/service.model.js';
-
+import { generateSlug } from '../../utils/slug.js';
 class ServiceController {
   async createService(req, res) {
   try {
@@ -8,6 +8,7 @@ class ServiceController {
 
     const serviceData = {
       ...req.body,
+      slug: generateSlug(req.body.name), // Tạo slug từ tên dịch vụ
       avatar: avatarFile?.path || '', // Link từ Cloudinary
       images: imageFiles.map((file) => file.path), // Mảng link từ Cloudinary
      
@@ -35,9 +36,9 @@ class ServiceController {
     }
   }
 
-  async getServiceById(req, res) {
+  async getServiceBySlug(req, res) {
     try {
-      const service = await Service.findById(req.params.id);
+      const service = await Service.findOne({ slug: req.params.slug });
       if (!service) {
         return res.status(404).json({ message: 'Service not found' });
       }
