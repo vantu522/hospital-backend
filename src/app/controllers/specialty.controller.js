@@ -1,3 +1,4 @@
+import { cloudinary, getPublicId } from '../../config/cloudinary.js';
 import Specialty from '../../models/specialty.model.js';
 import { generateSlug } from '../../utils/slug.js';
 
@@ -43,9 +44,17 @@ const specialtyController = {
         ...req.body,
         slug: generateSlug(req.body.name)
       }
-      const updated = await Specialty.findByIdAndUpdate(req.params.id, updatedData, { new: true });
+      const updated = await Specialty.findById(req.params.id, updatedData, { new: true });
       if (!updated) return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
-      res.json(updated);
+
+      const imageFiles = req.files.images || [];
+        // Nếu có ảnh mới => cập nhật mảng ảnh
+    if (imageFiles.length > 0) {
+      updatedData.images = imageFiles.map((file) => file.path);
+    }
+    const updatedSpecialty = await Specialty.findByIdAndUpdate(req.params.id, updatedData, {new:true})
+
+      res.status(200).json(updatedSpecialty);
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
@@ -56,6 +65,13 @@ const specialtyController = {
       const deleted = await Specialty.findByIdAndDelete(req.params.id);
       if (!deleted) return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
       res.json({ message: 'Đã xoá chuyên khoa' });
+
+      if(Array.isArray(deleted.images)){
+        for (const img of deleted.images){
+          const publicId = getPublicId(img);
+          await cloudinary.uploader.destroy(publicId);
+        }
+      }
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

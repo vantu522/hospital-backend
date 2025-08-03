@@ -16,4 +16,13 @@ const storage = new CloudinaryStorage({
   },
 });
 
-export { cloudinary, storage };
+function getPublicId(url) {
+  const parts = url.split('/');
+  const fileWithExt = parts[parts.length - 1]; // my-image.jpg
+  const folder = parts[parts.length - 2]; // hospital_images
+  const publicId = `${folder}/${fileWithExt.split('.')[0]}`;
+  return publicId;
+}
+
+
+export { cloudinary, storage ,getPublicId};
