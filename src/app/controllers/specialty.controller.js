@@ -1,10 +1,12 @@
 import Specialty from '../../models/specialty.model.js';
+import { generateSlug } from '../../utils/slug.js';
 
 const specialtyController = {
   createSpecialty: async (req, res) => {
     try {
       const specialtyData = {
         ...req.body,
+        slug: generateSlug(req.body.name),
         images: req.files?.images ? req.files.images.map(file => file.path) : [],
       }
       const specialty = new Specialty(specialtyData);
@@ -24,9 +26,10 @@ const specialtyController = {
     }
   },
 
-  getSpecialtyById: async (req, res) => {
+  getSpecialtyBySlug: async (req, res) => {
     try {
-      const specialty = await Specialty.findById(req.params.id);
+
+      const specialty = await Specialty.findOne({slug:req.params.slug});
       if (!specialty) return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
       res.json(specialty);
     } catch (err) {
@@ -36,8 +39,11 @@ const specialtyController = {
 
   updateSpecialty: async (req, res) => {
     try {
-      req.body.ngayCapNhat = new Date();
-      const updated = await Specialty.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const updatedData = {
+        ...req.body,
+        slug: generateSlug(req.body.name)
+      }
+      const updated = await Specialty.findByIdAndUpdate(req.params.id, updatedData, { new: true });
       if (!updated) return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
       res.json(updated);
     } catch (err) {

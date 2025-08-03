@@ -50,7 +50,11 @@ class ServiceController {
 
   async updateService(req, res) {
   try {
-    const service = await Service.findById(req.params.id);
+    const updatedData = {
+      ...req.body,
+      slug: generateSlug(req.body.name), // Cập nhật slug từ tên dịch vụ
+    }
+    const service = await Service.findById(req.params.id, updatedData, { new: true });
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
@@ -58,12 +62,7 @@ class ServiceController {
     const avatarFile = req.files?.avatar?.[0];
     const imageFiles = req.files?.images || [];
 
-    // Cập nhật dữ liệu
-    const updatedData = {
-      ...req.body,
-      updatedAt: new Date(),
-    };
-
+    
     // Nếu có avatar mới => cập nhật
     if (avatarFile) {
       updatedData.avatar = avatarFile.path;

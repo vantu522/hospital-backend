@@ -5,7 +5,7 @@ const specialtySchema = new mongoose.Schema({
   description: { type: String, required: false },
   images: [{ type: String }],
   functions: [{ type: String }],
-  
+  slug: {type:String},
   is_active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

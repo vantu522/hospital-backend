@@ -1,4 +1,5 @@
-
+import dotenv from 'dotenv'
+dotenv.config()
 
 
 export const MAX_STRING_SIZE = 255;
@@ -8,3 +9,4 @@ export const VALIDATE_FULL_NAME_REGEX = /^[a-zA-ZÀ-ỹ ]+$/
 export const CLOUD_API_KEY = process.env.CLOUD_API_KEY
 export const CLOUD_API_SECRET = process.env.CLOUD_API_SECRET
 export const CLOUD_NAME = process.env.CLOUD_NAME
+export const MONGO_URI = process.env.MONGO_URI

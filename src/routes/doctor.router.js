@@ -8,7 +8,7 @@ doctorRouter.post('/',upload.fields([
     { name: 'avatar', maxCount: 1 }
 ]), doctorController.createDoctor);
 doctorRouter.get('/', doctorController.getAllDoctors);
-doctorRouter.get('/:id', doctorController.getDoctorById);
+doctorRouter.get('/slug/:slug', doctorController.getDoctorBySlug);
 doctorRouter.put('/:id', upload.fields([
     { name: 'avatar', maxCount: 1 }
 ]) ,doctorController.updateDoctor);

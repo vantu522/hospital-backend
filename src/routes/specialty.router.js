@@ -7,7 +7,7 @@ specialtyRouter.post('/',upload.fields([
     { name: 'images', maxCount: 3 }
 ]), specialtyController.createSpecialty);
 specialtyRouter.get('/', specialtyController.getAllSpecialties);
-specialtyRouter.get('/:id', specialtyController.getSpecialtyById);
+specialtyRouter.get('/slug/:slug', specialtyController.getSpecialtyBySlug);
 specialtyRouter.put('/:id',upload.fields([
     { name: 'images', maxCount: 3 }
 ])
