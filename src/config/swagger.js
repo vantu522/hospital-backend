@@ -336,6 +336,78 @@ const options = {
             }
           }
         },
+        Recruitment: {
+          type: 'object',
+          required: ['title', 'specialty_id', 'recruitment_count', 'expiry_date'],
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'Recruitment ID'
+            },
+            title: {
+              type: 'string',
+              description: 'Recruitment title'
+            },
+            position: {
+              type: 'string',
+              description: 'Position name'
+            },
+            specialty_id: {
+              type: 'string',
+              description: 'Specialty ID reference'
+            },
+            description: {
+              type: 'string',
+              description: 'Job description'
+            },
+            requirements: {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+              description: 'Job requirements'
+            },
+            benefits: {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+              description: 'Job benefits'
+            },
+            deadline: {
+              type: 'string',
+              format: 'date',
+              description: 'Application deadline'
+            },
+            location: {
+              type: 'string',
+              description: 'Work location'
+            },
+            contact_email: {
+              type: 'string',
+              format: 'email',
+              description: 'Contact email'
+            },
+            recruitment_count: {
+              type: 'number',
+              minimum: 1,
+              description: 'Number of positions to recruit'
+            },
+            expiry_date: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Recruitment post expiry date'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
         Error: {
           type: 'object',
           properties: {
