@@ -14,8 +14,29 @@ dotenv.config();
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/hospital';
 
+// Helper function để xóa index cũ
+async function dropOldIndexes() {
+  const collections = [
+    { model: News, name: 'News' },
+    { model: Introduce, name: 'Introduce' },
+    { model: Recruitment, name: 'Recruitment' }
+  ];
+
+  for (const { model, name } of collections) {
+    try {
+      await model.collection.dropIndex('id_1');
+      console.log(`✅ Đã xóa index id_1 cũ từ ${name}`);
+    } catch (error) {
+      console.log(`ℹ️  Index id_1 ${name} không tồn tại hoặc đã được xóa`);
+    }
+  }
+}
+
 async function seed() {
   await mongoose.connect(MONGO_URI);
+
+  // Xóa tất cả index cũ
+  await dropOldIndexes();
 
   // Xóa dữ liệu cũ
   await Promise.all([
@@ -28,123 +49,132 @@ async function seed() {
     Recruitment.deleteMany({})
   ]);
 
-  // User
+  // User - Tạo admin và các user khác
   await User.create([
     {
-      id: faker.string.uuid(),
-      name: 'Admin',
+      name: 'Admin Hospital',
       email: 'admin@hospital.com',
-      password: '123456'
+      password: '123456',
+      role: 'admin'
     },
     {
-      id: faker.string.uuid(),
-      name: faker.person.fullName(),
+      name: 'Bác sĩ Nguyễn Văn Nam',
+      email: 'doctor@hospital.com',
+      password: '123456',
+      role: 'admin'
+    },
+    {
+      name: 'Nguyễn Thị Hoa',
+      email: 'user@hospital.com',
+      password: '123456',
+      role: 'admin'
+    },
+    {
+      name: faker.helpers.arrayElement([
+        'Nguyễn Văn Hùng', 'Trần Thị Mai', 'Lê Văn Đức', 
+        'Phạm Thị Lan', 'Hoàng Văn Minh', 'Vũ Thị Hoa'
+      ]),
       email: faker.internet.email(),
-      password: '123456'
+      password: '123456',
+      role: 'admin'
+    },
+    {
+      name: faker.helpers.arrayElement([
+        'Đỗ Văn Thành', 'Bùi Thị Nga', 'Đinh Văn Tú', 
+        'Ngô Thị Linh', 'Đặng Văn Long', 'Lý Thị Thu'
+      ]),
+      email: faker.internet.email(),
+      password: '123456',
+      role: 'admin'
     }
   ]);
 
   // Specialty
   const specialties = Array.from({ length: 5 }).map(() => ({
-    id: faker.string.uuid(),
-    tenChuyenKhoa: faker.commerce.department(),
-    moTa: faker.lorem.sentence(),
-    hinhAnh: faker.image.url(),
-    bacSiLienQuan: [],
-    dichVuLienQuan: [],
-    trangThai: true,
-    ngayTao: faker.date.past(),
-    ngayCapNhat: faker.date.recent()
+    name: faker.commerce.department(),
+    description: faker.lorem.sentence(),
+    images: [faker.image.url()],
+    functions: [],
+    slug: faker.lorem.slug(),
+    is_active: true
   }));
   await Specialty.insertMany(specialties);
 
   // Doctor
   const doctors = Array.from({ length: 10 }).map(() => ({
-    id: faker.string.uuid(),
-    hoTen: faker.person.fullName(),
-    chuyenKhoa: faker.helpers.arrayElement(specialties).tenChuyenKhoa,
-    hocVi: faker.person.jobTitle(),
-    moTa: faker.lorem.sentence(),
-    kinhNghiem: faker.number.int({ min: 1, max: 30 }),
-    lichKham: [
-      {
-        thu: 'Thứ 2',
-        khungGio: ['08:00-10:00', '14:00-16:00']
-      }
-    ],
-    avatarUrl: faker.image.avatar(),
-    bangCap: [faker.lorem.word()],
-    soDienThoai: faker.phone.number(),
+    full_name: faker.person.fullName(),
+    specialties: faker.helpers.arrayElement(specialties).name,
+    hospital: 'Bệnh viện Hospital',
+    department: faker.commerce.department(),
+    degree: faker.person.jobTitle(),
+    description: faker.lorem.sentence(),
+    experience: [faker.lorem.sentence()],
+    certifications: [faker.lorem.word()],
+    expertise_fields: [faker.lorem.word()],
+    training_process: [faker.lorem.sentence()],
+    slug: faker.lorem.slug(),
+    avatar: faker.image.avatar(),
+    phone_number: faker.phone.number(),
     email: faker.internet.email(),
-    diaChiLamViec: faker.location.streetAddress(),
-    danhGia: faker.number.float({ min: 3, max: 5, precision: 0.1 }),
-    luotDanhGia: faker.number.int({ min: 0, max: 100 }),
-    trangThai: true
+    work_address: faker.location.streetAddress(),
+    is_active: true
   }));
   await Doctor.insertMany(doctors);
 
   // Service
   const services = Array.from({ length: 8 }).map(() => ({
-    id: faker.string.uuid(),
     name: faker.commerce.productName(),
+    specialties: faker.helpers.arrayElement(specialties).name,
     description: faker.lorem.paragraph(),
-    price: faker.number.float({ min: 100000, max: 2000000, precision: 1000 }),
-    duration: faker.number.int({ min: 15, max: 120 }),
-    createdAt: faker.date.past(),
-    updatedAt: faker.date.recent(),
+    slug: faker.lorem.slug(),
+    avatar: faker.image.url(),
+    images: [faker.image.url()],
+    features: [faker.lorem.words(3)],
+    is_active: true
   }));
   await Service.insertMany(services);
 
   // News
   await News.insertMany(
     Array.from({ length: 6 }).map(() => ({
-      id: faker.string.uuid(),
-      tieuDe: faker.lorem.sentence(),
+      title: faker.lorem.sentence(),
       slug: faker.lorem.slug(),
-      moTaNgan: faker.lorem.sentence(),
-      noiDung: faker.lorem.paragraphs(2),
-      hinhAnh: faker.image.url(),
-      tacGia: faker.person.fullName(),
-      chuyenMuc: faker.helpers.arrayElement(['Cảnh báo', 'Sức khỏe', 'Tin bệnh viện']),
+      description: faker.lorem.sentence(),
+      content: faker.lorem.paragraphs(2),
+      image: faker.image.url(),
+      author: faker.person.fullName(),
+      category: faker.helpers.arrayElement(['Warning', 'Health', 'Hospital News']),
       tags: [faker.lorem.word(), faker.lorem.word()],
-      ngayDang: faker.date.past(),
-      trangThai: true,
-      luotXem: faker.number.int({ min: 0, max: 1000 }),
-      createdAt: faker.date.past(),
-      updatedAt: faker.date.recent()
+      publish_date: faker.date.past(),
+      is_active: true,
+      view_count: faker.number.int({ min: 0, max: 1000 })
     }))
   );
 
   // Introduce
   await Introduce.insertMany(
     Array.from({ length: 2 }).map(() => ({
-      id: faker.string.uuid(),
-      tieuDe: faker.lorem.words(3),
+      title: faker.lorem.words(3),
       slug: faker.lorem.slug(),
-      moTaNgan: faker.lorem.sentence(),
-      noiDung: faker.lorem.paragraphs(2),
-      hinhAnh: faker.image.url(),
-      trangThai: true,
-      createdAt: faker.date.past(),
-      updatedAt: faker.date.recent()
+      short_description: faker.lorem.sentence(),
+      content: faker.lorem.paragraphs(2),
+      image: faker.image.url(),
+      is_active: true
     }))
   );
 
   // Recruitment
   await Recruitment.insertMany(
     Array.from({ length: 4 }).map(() => ({
-      id: faker.string.uuid(),
       title: faker.person.jobTitle(),
       position: faker.person.jobType(),
-      departmentId: faker.helpers.arrayElement(specialties).id,
+      department_id: faker.string.uuid(),
       description: faker.lorem.paragraph(),
       requirements: [faker.lorem.sentence(), faker.lorem.sentence()],
       benefits: [faker.lorem.sentence(), faker.lorem.sentence()],
       deadline: faker.date.future(),
       location: faker.location.city(),
-      contactEmail: faker.internet.email(),
-      createdAt: faker.date.past(),
-      updatedAt: faker.date.recent()
+      contact_email: faker.internet.email()
     }))
   );
 

@@ -10,15 +10,15 @@ import informationRouter from "./information.router.js";
 
 
 function route(app){
-    app.use('/users',userRouter)
-    app.use('/news', newsRouter);
-    app.use('/doctors', doctorRouter);
-    app.use('/recruitments', recruitmentRouter);
-    app.use('/services', serviceRouter);
-    app.use('/specialties', specialtyRouter);
-    app.use('/introduces', introduceRouter);
-    app.use('/contacts',contactRouter)
-    app.use('/informations', informationRouter);
+    app.use('/api/users', userRouter)
+    app.use('/api/news', newsRouter);
+    app.use('/api/doctors', doctorRouter);
+    app.use('/api/recruitments', recruitmentRouter);
+    app.use('/api/services', serviceRouter);
+    app.use('/api/specialties', specialtyRouter);
+    app.use('/api/introduces', introduceRouter);
+    app.use('/api/contacts', contactRouter)
+    app.use('/api/informations', informationRouter);
 }
 
 export default route;

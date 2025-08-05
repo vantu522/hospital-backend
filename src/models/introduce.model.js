@@ -1,15 +1,14 @@
 import mongoose from 'mongoose';
 
 const introduceSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  tieuDe: { type: String, required: true },
+  title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
-  moTaNgan: String,
-  noiDung: String,
-  hinhAnh: String,
-  trangThai: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  short_description: String,
+  content: String,
+  image: String,
+  is_active: { type: Boolean, default: true }
+}, {
+  timestamps: true
 });
 
 const Introduce = mongoose.model('Introduce', introduceSchema);

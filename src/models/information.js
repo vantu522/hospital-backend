@@ -8,9 +8,9 @@ const informationSchema = new mongoose.Schema({
   hotline: { type: String, required: false },
   emergency_phone: { type: String, required: false },
   work_hours: [{ type: String, required: false }],
-  license: [{ type: String, required: false }],
-  created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now },
+  license: [{ type: String, required: false }]
+}, {
+  timestamps: true
 });
 const Information = mongoose.model("Information", informationSchema);
 

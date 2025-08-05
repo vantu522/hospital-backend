@@ -6,9 +6,9 @@ const specialtySchema = new mongoose.Schema({
   images: [{ type: String }],
   functions: [{ type: String }],
   slug: {type:String},
-  is_active: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  is_active: { type: Boolean, default: true }
+}, {
+  timestamps: true
 });
 
 const Specialty = mongoose.model('Specialty', specialtySchema);

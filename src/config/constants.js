@@ -10,3 +10,5 @@ export const CLOUD_API_KEY = process.env.CLOUD_API_KEY
 export const CLOUD_API_SECRET = process.env.CLOUD_API_SECRET
 export const CLOUD_NAME = process.env.CLOUD_NAME
 export const MONGO_URI = process.env.MONGO_URI
+export const JWT_SECRET = process.env.JWT_SECRET || 'hospital_secret_key_2025'
+export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'

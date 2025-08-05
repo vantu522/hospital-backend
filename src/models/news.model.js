@@ -4,16 +4,16 @@ const newsSchema = new mongoose.Schema({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
   description: String,
-  noiDung: String,
-  hinhAnh: String,
-  tacGia: String,
-  chuyenMuc: String,
+  content: String,
+  image: String,
+  author: String,
+  category: String,
   tags: [String],
-  ngayDang: { type: Date, default: Date.now },
-  trangThai: { type: Boolean, default: true },
-  luotXem: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  publish_date: { type: Date, default: Date.now },
+  is_active: { type: Boolean, default: true },
+  view_count: { type: Number, default: 0 }
+}, {
+  timestamps: true
 });
 
 const News = mongoose.model('News', newsSchema);

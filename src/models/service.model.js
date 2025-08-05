@@ -8,9 +8,9 @@ const serviceSchema = new mongoose.Schema({
   avatar: { type: String, required: false },
   images: [{ type: String }],
   features: [{ type: String }],
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+  is_active: { type: Boolean, default: true }
+}, {
+  timestamps: true
 });
 
 const Service = mongoose.model('Service', serviceSchema);
