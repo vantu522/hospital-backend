@@ -1,5 +1,6 @@
 import News from '../../models/news.model.js';
-import slugify from 'slugify';
+import { generateSlug } from '../../utils/slug.js';
+import { paginate } from '../../utils/pagination.js';
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ const createNews = async (req, res) => {
     }
 
     // Tạo slug từ title
-    const slug = slugify(title, { lower: true, strict: true });
+    const slug = generateSlug(title);
 
     // Kiểm tra slug đã tồn tại chưa
     const existingNews = await News.findOne({ slug });
@@ -146,11 +147,6 @@ const createNews = async (req, res) => {
  *           type: integer
  *           default: 10
  *         description: Number of articles per page
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Filter by category
  *     responses:
  *       200:
  *         description: List of news articles
@@ -181,38 +177,81 @@ const getAllNews = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const { category } = req.query;
 
-    // Build query
-    const query = { is_active: true };
-    if (category) {
-      query.category = new RegExp(category, 'i');
-    }
+    // Build query - không có điều kiện gì, lấy tất cả tin tức
+    const query = {};
 
-    const [newsList, total] = await Promise.all([
-      News.find(query)
-        .sort({ publish_date: -1 })
-        .skip(skip)
-        .limit(limit),
-      News.countDocuments(query)
-    ]);
-
-    const pages = Math.ceil(total / limit);
-
-    res.json({
-      success: true,
-      data: newsList,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages
-      }
+    // Kế thừa pagination utility với options đơn giản
+    const result = await paginate(News, query, {
+      page,
+      limit: Math.min(limit, 100), // Giới hạn max 100
+      sort: { publish_date: -1 }    // Luôn sắp xếp theo mới nhất
     });
+
+    res.json(result);
 
   } catch (error) {
     console.error('Get news error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/news/slug/{slug}:
+ *   get:
+ *     summary: Get news article by slug
+ *     tags: [News]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: News slug
+ *     responses:
+ *       200:
+ *         description: News article details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/News'
+ *       404:
+ *         description: News not found
+ */
+const getNewsBySlug = async (req, res) => {
+  try {
+    const news = await News.findOne({ slug: req.params.slug});
+    
+    if (!news) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy bài viết'
+      });
+    }
+
+    // Tăng view count
+    await News.findOneAndUpdate(
+      { slug: req.params.slug }, 
+      { $inc: { view_count: 1 } }
+    );
+
+    res.json({
+      success: true,
+      data: news
+    });
+
+  } catch (error) {
+    console.error('Get news by slug error:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi server',
@@ -333,7 +372,7 @@ const updateNews = async (req, res) => {
 
     // Nếu title thay đổi, tạo slug mới
     if (updateData.title) {
-      const slug = slugify(updateData.title, { lower: true, strict: true });
+      const slug = generateSlug(updateData.title);
       updateData.slug = slug;
     }
 
@@ -417,4 +456,4 @@ const deleteNews = async (req, res) => {
   }
 };
 
-export { createNews, getAllNews, getNewsById, updateNews, deleteNews };
+export { createNews, getAllNews, getNewsById, getNewsBySlug, updateNews, deleteNews };
