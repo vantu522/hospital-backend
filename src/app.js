@@ -9,6 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+// Cho phép truy cập file upload
+app.use("/uploads", express.static("uploads"));
+
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {

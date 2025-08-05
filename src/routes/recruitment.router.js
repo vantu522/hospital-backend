@@ -1,16 +1,14 @@
 import { Router } from 'express';
 import recruitmentController from '../app/controllers/recruitment.controller.js';
-import upload from '../app/middlewares/upload.js';
-
+import { uploadPDF } from '../utils/uploadPDF.js';
 const recruitmentRouter = Router();
 
-recruitmentRouter.post('/', upload.fields([
-    { name: 'document', maxCount: 2 }
-
-]),recruitmentController.createRecruitment);
+recruitmentRouter.post('/',uploadPDF.single("document") ,recruitmentController.createRecruitment);
 recruitmentRouter.get('/', recruitmentController.getAllRecruitments);
 recruitmentRouter.get('/:id', recruitmentController.getRecruitmentById);
-recruitmentRouter.put('/:id', recruitmentController.updateRecruitment);
+recruitmentRouter.get('/slug/:slug', recruitmentController.getRecruitmentBySlug);
+
+recruitmentRouter.put('/:id', uploadPDF.single("document"),recruitmentController.updateRecruitment);
 recruitmentRouter.delete('/:id', recruitmentController.deleteRecruitment);
 
 export default recruitmentRouter;

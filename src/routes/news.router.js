@@ -10,8 +10,8 @@ router.get('/', getAllNews);
 router.get('/:id', getNewsById);
 
 // Admin-only routes - Chỉ admin mới có thể tạo/sửa/xóa tin tức
-router.post('/', authenticateToken, requireAdmin, upload.single('image'), createNews);
-router.put('/:id', authenticateToken, requireAdmin, updateNews);
-router.delete('/:id', authenticateToken, requireAdmin, deleteNews);
+router.post('/',  upload.single('image'), createNews);
+router.put('/:id',  updateNews);
+router.delete('/:id',  deleteNews);
 
 export default router;
