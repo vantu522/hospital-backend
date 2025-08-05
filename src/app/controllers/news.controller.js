@@ -17,7 +17,10 @@ import slugify from 'slugify';
  *             type: object
  *             required:
  *               - title
+ *               - description
  *               - content
+ *               - category
+ *               - tags
  *             properties:
  *               title:
  *                 type: string
@@ -66,11 +69,20 @@ const createNews = async (req, res) => {
     const { title, description, content, category, tags } = req.body;
     const imageUrl = req.file?.path || '';
 
-    // Validation
-    if (!title || !content) {
+    // Validation - Kiểm tra tất cả field bắt buộc
+    if (!title || !description || !content || !category || !tags) {
       return res.status(400).json({
         success: false,
-        message: 'Tiêu đề và nội dung là bắt buộc'
+        message: 'Tất cả các trường đều bắt buộc: title, description, content, category, tags'
+      });
+    }
+
+    // Kiểm tra tags không được rỗng
+    const processedTags = Array.isArray(tags) ? tags : (tags ? tags.split(',').map(tag => tag.trim()) : []);
+    if (processedTags.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tags không được để trống'
       });
     }
 
@@ -87,12 +99,12 @@ const createNews = async (req, res) => {
     const newsData = {
       title: title.trim(),
       slug: finalSlug,
-      description: description?.trim(),
+      description: description.trim(),
       content: content.trim(),
       image: imageUrl,
       author: req.user.name, // Lấy tên từ token
-      category: category?.trim(),
-      tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(tag => tag.trim()) : []),
+      category: category.trim(),
+      tags: processedTags,
       publish_date: new Date(),
       is_active: true,
       view_count: 0
