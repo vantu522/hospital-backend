@@ -48,44 +48,58 @@ class ServiceController {
     }
   }
 
-  async updateService(req, res) {
-    try {
-      const updatedData = {
-        ...req.body,
-        slug: generateSlug(req.body.name), // Cập nhật slug từ tên dịch vụ
-      };
-      const service = await Service.findById(req.params.id, updatedData, {
-        new: true,
-      });
-      if (!service) {
-        return res.status(404).json({ message: "Service not found" });
-      }
-
-      const avatarFile = req.files?.avatar?.[0];
-      const imageFiles = req.files?.images || [];
-
-      // Nếu có avatar mới => cập nhật
-      if (avatarFile) {
-        updatedData.avatar = avatarFile.path;
-      }
-
-      // Nếu có ảnh mới => cập nhật mảng ảnh
-      if (imageFiles.length > 0) {
-        updatedData.images = imageFiles.map((file) => file.path);
-      }
-
-      const updatedService = await Service.findByIdAndUpdate(
-        req.params.id,
-        updatedData,
-        { new: true }
-      );
-
-      res.status(200).json(updatedService);
-    } catch (error) {
-      console.error(error);
-      res.status(400).json({ message: error.message });
+async updateService(req, res) {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
     }
+
+    const avatarFile = req.files?.avatar?.[0];
+    const imageFiles = req.files?.images || [];
+
+    const updatedData = {
+      ...req.body,
+      slug: generateSlug(req.body.name),
+      updatedAt: new Date(),
+    };
+
+    // Xử lý avatar
+    if (avatarFile) {
+      if (service.avatar) {
+        const publicId = getPublicId(service.avatar);
+        await cloudinary.uploader.destroy(publicId); // chỉ 1 file, OK
+      }
+      updatedData.avatar = avatarFile.path;
+    }
+
+    // Xử lý nhiều ảnh nhanh hơn
+    if (imageFiles.length > 0) {
+      if (Array.isArray(service.images) && service.images.length > 0) {
+        await Promise.all(
+          service.images.map((img) => {
+            const publicId = getPublicId(img);
+            return cloudinary.uploader.destroy(publicId);
+          })
+        );
+      }
+
+      updatedData.images = imageFiles.map((file) => file.path);
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+
+    res.status(200).json(updatedService);
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ message: error.message });
   }
+}
+
 
   async deleteService(req, res) {
     try {

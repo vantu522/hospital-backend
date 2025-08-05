@@ -38,27 +38,45 @@ const specialtyController = {
     }
   },
 
-  updateSpecialty: async (req, res) => {
-    try {
-      const updatedData = {
-        ...req.body,
-        slug: generateSlug(req.body.name)
-      }
-      const updated = await Specialty.findById(req.params.id, updatedData, { new: true });
-      if (!updated) return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
+ updateSpecialty: async (req, res) => {
+  try {
+    const specialty = await Specialty.findById(req.params.id);
+    if (!specialty) {
+      return res.status(404).json({ message: 'Không tìm thấy chuyên khoa' });
+    }
 
-      const imageFiles = req.files.images || [];
-        // Nếu có ảnh mới => cập nhật mảng ảnh
+    const imageFiles = req.files?.images || [];
+
+    const updatedData = {
+      ...req.body,
+      slug: generateSlug(req.body.name),
+    };
+
+    // Nếu có ảnh mới -> xóa ảnh cũ trước
     if (imageFiles.length > 0) {
+      if (Array.isArray(specialty.images)) {
+        for (const img of specialty.images) {
+          const publicId = getPublicId(img);
+          await cloudinary.uploader.destroy(publicId);
+        }
+      }
+
+      // Cập nhật ảnh mới
       updatedData.images = imageFiles.map((file) => file.path);
     }
-    const updatedSpecialty = await Specialty.findByIdAndUpdate(req.params.id, updatedData, {new:true})
 
-      res.status(200).json(updatedSpecialty);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  },
+    const updatedSpecialty = await Specialty.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+
+    res.status(200).json(updatedSpecialty);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+},
+
 
   deleteSpecialty: async (req, res) => {
     try {
