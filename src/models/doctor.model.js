@@ -16,8 +16,7 @@ const doctorSchema = new mongoose.Schema({
   phone_number: String,
   email: String,
   work_address: String,
-  
-  isActive: { type: Boolean, default: true },
+  is_active: { type: Boolean, default: true }
 }, {
   timestamps: true
 });
