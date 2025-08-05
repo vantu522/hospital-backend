@@ -1,9 +1,19 @@
 import Recruitment from '../../models/recruitment.model.js';
-
+import { generateSlug } from '../../utils/slug.js';
 const recruitmentController = {
   createRecruitment: async (req, res) => {
     try {
-      const recruitment = new Recruitment(req.body);
+           const documentFiles = req.files?.document?.[0];
+
+
+
+      const recruitmentData = {
+        ...req.body,
+        slug: generateSlug(req.body.title), // Tạo slug từ tên dịch vụ
+        document: documentFiles?.path || "", // Link từ Cloudinary
+         resource_type: documentFiles?.mimetype?.includes('image') ? 'image' : 'raw',
+      }
+      const recruitment = new Recruitment(recruitmentData);
       await recruitment.save();
       res.status(201).json(recruitment);
     } catch (err) {
