@@ -1,13 +1,18 @@
 import mongoose from 'mongoose';
 
 const healthConsultationSchema = new mongoose.Schema({
-  title:{
-    type:String,
-    required:true
-  }
-  ,
+  title: {
+    type: String,
+    required: [true, 'Title is required'],
+    trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
+  },
   slug: {
-    type:String
+    type: String,
+    required: [true, 'Slug is required'],
+    unique: true,
+    trim: true,
+    lowercase: true
   },
   image: {
     type: String,
@@ -38,6 +43,8 @@ const healthConsultationSchema = new mongoose.Schema({
 healthConsultationSchema.index({ specialty_id: 1 });
 healthConsultationSchema.index({ is_active: 1 });
 healthConsultationSchema.index({ createdAt: -1 });
+healthConsultationSchema.index({ slug: 1 }, { unique: true });
+healthConsultationSchema.index({ title: 'text' }); // Text search index
 
 // NOTE: Khi sử dụng, chỉ populate field 'name' để tránh tràn data:
 // .populate('specialty_id', 'name')

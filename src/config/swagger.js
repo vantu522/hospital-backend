@@ -348,6 +348,10 @@ const options = {
               type: 'string',
               description: 'Recruitment title'
             },
+            slug: {
+              type: 'string',
+              description: 'URL slug'
+            },
             position: {
               type: 'string',
               description: 'Position name'
@@ -398,6 +402,10 @@ const options = {
               format: 'date-time',
               description: 'Recruitment post expiry date'
             },
+            document: {
+              type: 'string',
+              description: 'Document file path'
+            },
             createdAt: {
               type: 'string',
               format: 'date-time'
@@ -405,6 +413,91 @@ const options = {
             updatedAt: {
               type: 'string',
               format: 'date-time'
+            }
+          }
+        },
+        HealthConsultation: {
+          type: 'object',
+          required: ['title', 'slug', 'image', 'description', 'specialty_id'],
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'Health consultation ID'
+            },
+            title: {
+              type: 'string',
+              description: 'Health consultation title'
+            },
+            slug: {
+              type: 'string',
+              description: 'URL slug'
+            },
+            image: {
+              type: 'string',
+              description: 'Consultation image URL'
+            },
+            description: {
+              type: 'string',
+              description: 'Health consultation description'
+            },
+            specialty_id: {
+              type: 'string',
+              description: 'Specialty ID reference'
+            },
+            is_active: {
+              type: 'boolean',
+              default: true,
+              description: 'Active status'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
+        Application: {
+          type: 'object',
+          required: ['name', 'email', 'phone'],
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'Application ID'
+            },
+            name: {
+              type: 'string',
+              description: 'Applicant full name'
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Applicant email address'
+            },
+            phone: {
+              type: 'string',
+              description: 'Applicant phone number'
+            },
+            coverLetter: {
+              type: 'string',
+              description: 'Cover letter content'
+            },
+            cvFileUrl: {
+              type: 'string',
+              description: 'CV file path/URL'
+            },
+            status: {
+              type: 'string',
+              enum: ['pending', 'approved', 'rejected'],
+              default: 'pending',
+              description: 'Application status'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Application submission date'
             }
           }
         },

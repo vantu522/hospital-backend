@@ -7,7 +7,7 @@ import {
   deleteSpecialty, 
   getSpecialtyWithDoctors
 } from '../app/controllers/specialty.controller.js';
-import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js';
+// import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js'; // TODO: Uncomment for production
 import upload from '../app/middlewares/upload.js';
 
 const specialtyRouter = Router();

@@ -8,6 +8,7 @@ import introduceRouter from "./introduce.router.js";
 import contactRouter from "./contact.router.js";
 import informationRouter from "./information.router.js";
 import healthConsultationRouter from "./health-consultation.router.js";
+import applicationRouter from "./application.router.js";
 
 
 function route(app){
@@ -21,6 +22,7 @@ function route(app){
     app.use('/api/contacts', contactRouter)
     app.use('/api/informations', informationRouter);
     app.use('/api/health-consultations', healthConsultationRouter);
+    app.use('/api/applications', applicationRouter);
 }
 
 export default route;
