@@ -14,7 +14,7 @@ serviceRouter.post(
   ]),
   serviceController.createService
 );
-serviceRouter.get("/",authenticateToken,requireAdmin ,serviceController.getAllServices);
+serviceRouter.get("/",serviceController.getAllServices);
 serviceRouter.get("/slug/:slug", serviceController.getServiceBySlug);
 serviceRouter.put(
   "/:id",

@@ -17,10 +17,6 @@ router.get('/', getAllHealthConsultations);
 router.get('/slug/:slug', getHealthConsultationBySlug);
 router.get('/:id', getHealthConsultationById);
 
-// Admin only routes - TODO: Add back authentication for production
-// router.post('/', authenticateToken, requireAdmin, upload.single('image'), createHealthConsultation);
-// router.put('/:id', authenticateToken, requireAdmin, updateHealthConsultation);
-// router.delete('/:id', authenticateToken, requireAdmin, deleteHealthConsultation);
 router.post('/', upload.single('image'), createHealthConsultation);
 router.put('/:id', updateHealthConsultation);
 router.delete('/:id', deleteHealthConsultation);
