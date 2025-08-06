@@ -9,6 +9,8 @@ import Specialty from './models/specialty.model.js';
 import News from './models/news.model.js';
 import Introduce from './models/introduce.model.js';
 import Recruitment from './models/recruitment.model.js';
+import { generateSlug } from './utils/slug.js';
+
 faker.locale = 'en'; 
 dotenv.config();
 
@@ -89,93 +91,147 @@ async function seed() {
     }
   ]);
 
-  // Specialty
-  const specialties = Array.from({ length: 5 }).map(() => ({
-    name: faker.commerce.department(),
-    description: faker.lorem.sentence(),
-    images: [faker.image.url()],
-    functions: [],
-    slug: faker.lorem.slug(),
-    is_active: true
-  }));
-  await Specialty.insertMany(specialties);
+  // Specialty - Tạo trước để có reference
+  const specialtyData = [
+    {
+      name: 'Tim mạch',
+      description: 'Chuyên khoa tim mạch',
+      images: [faker.image.url()],
+      functions: ['Khám tim', 'Siêu âm tim', 'Điện tâm đồ'],
+      slug: generateSlug('Tim mạch'),
+      is_active: true
+    },
+    {
+      name: 'Nội khoa',
+      description: 'Chuyên khoa nội tổng hợp',
+      images: [faker.image.url()],
+      functions: ['Khám tổng quát', 'Chẩn đoán', 'Điều trị nội khoa'],
+      slug: generateSlug('Nội khoa'),
+      is_active: true
+    },
+    {
+      name: 'Ngoại khoa',
+      description: 'Chuyên khoa phẫu thuật',
+      images: [faker.image.url()],
+      functions: ['Phẫu thuật', 'Mổ cấp cứu', 'Phẫu thuật thẩm mỹ'],
+      slug: generateSlug('Ngoại khoa'),
+      is_active: true
+    },
+    {
+      name: 'Sản phụ khoa',
+      description: 'Chuyên khoa sản phụ khoa',
+      images: [faker.image.url()],
+      functions: ['Khám thai', 'Sinh con', 'Điều trị phụ khoa'],
+      slug: generateSlug('Sản phụ khoa'),
+      is_active: true
+    },
+    {
+      name: 'Nhi khoa',
+      description: 'Chuyên khoa trẻ em',
+      images: [faker.image.url()],
+      functions: ['Khám trẻ em', 'Tiêm chủng', 'Điều trị bệnh nhi'],
+      slug: generateSlug('Nhi khoa'),
+      is_active: true
+    }
+  ];
+  
+  const specialties = await Specialty.insertMany(specialtyData);
 
   // Doctor
-  const doctors = Array.from({ length: 10 }).map(() => ({
-    full_name: faker.person.fullName(),
-    specialties: faker.helpers.arrayElement(specialties).name,
-    hospital: 'Bệnh viện Hospital',
-    department: faker.commerce.department(),
-    degree: faker.person.jobTitle(),
-    description: faker.lorem.sentence(),
-    experience: [faker.lorem.sentence()],
-    certifications: [faker.lorem.word()],
-    expertise_fields: [faker.lorem.word()],
-    training_process: [faker.lorem.sentence()],
-    slug: faker.lorem.slug(),
-    avatar: faker.image.avatar(),
-    phone_number: faker.phone.number(),
-    email: faker.internet.email(),
-    work_address: faker.location.streetAddress(),
-    is_active: true
-  }));
+  const doctors = Array.from({ length: 10 }).map(() => {
+    const fullName = faker.person.fullName();
+    return {
+      full_name: fullName,
+      specialties: faker.helpers.arrayElement(specialties).name,
+      hospital: 'Bệnh viện Hospital',
+      department: faker.commerce.department(),
+      degree: faker.person.jobTitle(),
+      description: faker.lorem.sentence(),
+      experience: [faker.lorem.sentence()],
+      certifications: [faker.lorem.word()],
+      expertise_fields: [faker.lorem.word()],
+      training_process: [faker.lorem.sentence()],
+      slug: generateSlug(fullName),
+      avatar: faker.image.avatar(),
+      phone_number: faker.phone.number(),
+      email: faker.internet.email(),
+      work_address: faker.location.streetAddress(),
+      is_active: true
+    };
+  });
   await Doctor.insertMany(doctors);
 
   // Service
-  const services = Array.from({ length: 8 }).map(() => ({
-    name: faker.commerce.productName(),
-    specialties: faker.helpers.arrayElement(specialties).name,
-    description: faker.lorem.paragraph(),
-    slug: faker.lorem.slug(),
-    avatar: faker.image.url(),
-    images: [faker.image.url()],
-    features: [faker.lorem.words(3)],
-    is_active: true
-  }));
+  const services = Array.from({ length: 8 }).map(() => {
+    const serviceName = faker.commerce.productName();
+    return {
+      name: serviceName,
+      specialties: faker.helpers.arrayElement(specialties).name,
+      description: faker.lorem.paragraph(),
+      slug: generateSlug(serviceName),
+      avatar: faker.image.url(),
+      images: [faker.image.url()],
+      features: [faker.lorem.words(3)],
+      is_active: true
+    };
+  });
   await Service.insertMany(services);
 
   // News
   await News.insertMany(
-    Array.from({ length: 6 }).map(() => ({
-      title: faker.lorem.sentence(),
-      slug: faker.lorem.slug(),
-      description: faker.lorem.sentence(),
-      content: faker.lorem.paragraphs(2),
-      image: faker.image.url(),
-      author: faker.person.fullName(),
-      category: faker.helpers.arrayElement(['Warning', 'Health', 'Hospital News']),
-      tags: [faker.lorem.word(), faker.lorem.word()],
-      publish_date: faker.date.past(),
-      is_active: true,
-      view_count: faker.number.int({ min: 0, max: 1000 })
-    }))
+    Array.from({ length: 6 }).map(() => {
+      const newsTitle = faker.lorem.sentence();
+      return {
+        title: newsTitle,
+        slug: generateSlug(newsTitle),
+        description: faker.lorem.sentence(),
+        content: faker.lorem.paragraphs(2),
+        image: faker.image.url(),
+        author: faker.person.fullName(),
+        category: faker.helpers.arrayElement(['Warning', 'Health', 'Hospital News']),
+        tags: [faker.lorem.word(), faker.lorem.word()],
+        publish_date: faker.date.past(),
+        is_active: true,
+        view_count: faker.number.int({ min: 0, max: 1000 })
+      };
+    })
   );
 
   // Introduce
   await Introduce.insertMany(
-    Array.from({ length: 2 }).map(() => ({
-      title: faker.lorem.words(3),
-      slug: faker.lorem.slug(),
-      short_description: faker.lorem.sentence(),
-      content: faker.lorem.paragraphs(2),
-      image: faker.image.url(),
-      is_active: true
-    }))
+    Array.from({ length: 2 }).map(() => {
+      const introduceTitle = faker.lorem.words(3);
+      return {
+        title: introduceTitle,
+        slug: generateSlug(introduceTitle),
+        short_description: faker.lorem.sentence(),
+        content: faker.lorem.paragraphs(2),
+        image: faker.image.url(),
+        is_active: true
+      };
+    })
   );
 
-  // Recruitment
+  // Recruitment - Cập nhật theo schema mới
   await Recruitment.insertMany(
-    Array.from({ length: 4 }).map(() => ({
-      title: faker.person.jobTitle(),
-      position: faker.person.jobType(),
-      department_id: faker.string.uuid(),
-      description: faker.lorem.paragraph(),
-      requirements: [faker.lorem.sentence(), faker.lorem.sentence()],
-      benefits: [faker.lorem.sentence(), faker.lorem.sentence()],
-      deadline: faker.date.future(),
-      location: faker.location.city(),
-      contact_email: faker.internet.email()
-    }))
+    Array.from({ length: 4 }).map(() => {
+      const jobTitle = faker.person.jobTitle();
+      return {
+        title: jobTitle,
+        slug: generateSlug(jobTitle),
+        position: faker.person.jobType(),
+        specialty_id: faker.helpers.arrayElement(specialties)._id, // Reference đến specialty
+        description: faker.lorem.paragraph(),
+        requirements: [faker.lorem.sentence(), faker.lorem.sentence()],
+        benefits: [faker.lorem.sentence(), faker.lorem.sentence()],
+        deadline: faker.date.future(),
+        location: faker.location.city(),
+        contact_email: faker.internet.email(),
+        recruitment_count: faker.number.int({ min: 1, max: 10 }), // Required field
+        expiry_date: faker.date.future(), // Required field
+        document: null // Optional document path
+      };
+    })
   );
 
   console.log('Seed dữ liệu mẫu thành công!');
