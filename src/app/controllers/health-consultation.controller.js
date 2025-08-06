@@ -254,7 +254,7 @@ const getHealthConsultationById = async (req, res) => {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -263,10 +263,17 @@ const getHealthConsultationById = async (req, res) => {
  *                 description: Health consultation title
  *               description:
  *                 type: string
+ *                 description: Health consultation description
  *               specialty_id:
  *                 type: string
+ *                 description: Specialty ID
  *               is_active:
  *                 type: boolean
+ *                 description: Is consultation active
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: New consultation image (optional)
  *     responses:
  *       200:
  *         description: Health consultation updated successfully
@@ -280,31 +287,98 @@ const getHealthConsultationById = async (req, res) => {
 const updateHealthConsultation = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('Update health consultation request - ID:', id);
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file ? {
+      filename: req.file.filename,
+      path: req.file.path,
+      originalname: req.file.originalname
+    } : 'No file uploaded');
+
+    // Tìm consultation hiện tại
+    const currentConsultation = await HealthConsultation.findById(id);
+    if (!currentConsultation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tư vấn sức khỏe'
+      });
+    }
+
     const updateData = { ...req.body };
 
-    // Nếu có title mới, tạo slug mới
-    if (updateData.title) {
+    // Parse specialty_id nếu có (fix lỗi [object Object])
+    if (updateData.specialty_id) {
+      console.log('Original specialty_id type:', typeof updateData.specialty_id);
+      console.log('Original specialty_id value:', updateData.specialty_id);
+      
+      if (typeof updateData.specialty_id === 'object') {
+        // Nếu là object, lấy _id hoặc id
+        updateData.specialty_id = updateData.specialty_id._id || updateData.specialty_id.id || updateData.specialty_id;
+      }
+      
+      // Nếu vẫn là object hoặc [object Object], thử stringify và parse
+      if (typeof updateData.specialty_id === 'object' || updateData.specialty_id === '[object Object]') {
+        console.log('Still object, trying to extract ID...');
+        // Có thể frontend gửi object với cấu trúc khác
+        if (updateData.specialty_id && updateData.specialty_id.toString) {
+          updateData.specialty_id = updateData.specialty_id.toString();
+        }
+        
+        // Nếu vẫn là [object Object], skip validation này
+        if (updateData.specialty_id === '[object Object]') {
+          console.log('Cannot parse specialty_id, removing from update data');
+          delete updateData.specialty_id;
+        }
+      } else {
+        // Đảm bảo specialty_id là string hợp lệ
+        updateData.specialty_id = String(updateData.specialty_id);
+      }
+      
+      console.log('Final parsed specialty_id:', updateData.specialty_id);
+    }
+
+    // Parse is_active nếu có (convert string to boolean)
+    if (updateData.is_active !== undefined) {
+      if (typeof updateData.is_active === 'string') {
+        updateData.is_active = updateData.is_active === 'true';
+      }
+    }
+
+    // Xử lý title và slug nếu có
+    if (updateData.title && updateData.title.trim() !== '') {
       updateData.title = updateData.title.trim();
       const newSlug = generateSlug(updateData.title);
       
       // Kiểm tra slug mới có trung với consultation khác không (trừ chính nó)
-      const existingConsultation = await HealthConsultation.findOne({ 
-        slug: newSlug, 
-        _id: { $ne: id } 
-      });
-      
-      if (existingConsultation) {
-        return res.status(400).json({
-          success: false,
-          message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+      if (newSlug !== currentConsultation.slug) {
+        const existingConsultation = await HealthConsultation.findOne({ 
+          slug: newSlug, 
+          _id: { $ne: id } 
         });
+        
+        if (existingConsultation) {
+          return res.status(400).json({
+            success: false,
+            message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+          });
+        }
       }
       
       updateData.slug = newSlug;
     }
 
-    // Nếu có specialty_id mới, kiểm tra tồn tại
+    // Kiểm tra specialty_id nếu có và hợp lệ
     if (updateData.specialty_id) {
+      // Kiểm tra format ObjectId hợp lệ (24 ký tự hex)
+      const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+      if (!objectIdRegex.test(updateData.specialty_id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'specialty_id không hợp lệ'
+        });
+      }
+      
       const specialty = await Specialty.findById(updateData.specialty_id);
       if (!specialty) {
         return res.status(400).json({
@@ -313,6 +387,16 @@ const updateHealthConsultation = async (req, res) => {
         });
       }
     }
+
+    // Xử lý ảnh mới nếu có
+    if (req.file) {
+      updateData.image = req.file.path; // Cloudinary URL
+      console.log('New image path:', req.file.path);
+    }
+
+    updateData.updatedAt = new Date();
+
+    console.log('Final update data:', updateData);
 
     const updatedConsultation = await HealthConsultation.findByIdAndUpdate(
       id, 
