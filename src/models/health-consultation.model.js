@@ -1,6 +1,14 @@
 import mongoose from 'mongoose';
 
 const healthConsultationSchema = new mongoose.Schema({
+  title:{
+    type:String,
+    required:true
+  }
+  ,
+  slug: {
+    type:String
+  },
   image: {
     type: String,
     required: [true, 'Image is required'],

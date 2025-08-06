@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 
 const doctorSchema = new mongoose.Schema({
   full_name: { type: String, required: true },
-  specialties: { type: String, required: true },
+  specialties: { type: mongoose.Schema.Types.ObjectId, ref: 'Specialty' },
+
   hospital: String,
   department: String,
   degree: String,

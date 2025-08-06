@@ -1,6 +1,8 @@
 import { Router } from "express";
 import serviceController from "../app/controllers/service.controller.js";
 import upload from "../app/middlewares/upload.js";
+import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js';
+
 
 const serviceRouter = Router();
 
@@ -12,7 +14,7 @@ serviceRouter.post(
   ]),
   serviceController.createService
 );
-serviceRouter.get("/", serviceController.getAllServices);
+serviceRouter.get("/",authenticateToken,requireAdmin ,serviceController.getAllServices);
 serviceRouter.get("/slug/:slug", serviceController.getServiceBySlug);
 serviceRouter.put(
   "/:id",

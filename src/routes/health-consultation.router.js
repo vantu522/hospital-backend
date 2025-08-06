@@ -16,8 +16,8 @@ router.get('/', getAllHealthConsultations);
 router.get('/:id', getHealthConsultationById);
 
 // Admin only routes
-router.post('/', authenticateToken, requireAdmin, upload.single('image'), createHealthConsultation);
-router.put('/:id', authenticateToken, requireAdmin, updateHealthConsultation);
-router.delete('/:id', authenticateToken, requireAdmin, deleteHealthConsultation);
+router.post('/',  upload.single('image'), createHealthConsultation);
+router.put('/:id',  updateHealthConsultation);
+router.delete('/:id',  deleteHealthConsultation);
 
 export default router;

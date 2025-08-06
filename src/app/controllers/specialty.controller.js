@@ -1,6 +1,7 @@
 import { cloudinary, getPublicId } from '../../config/cloudinary.js';
 import Specialty from '../../models/specialty.model.js';
 import { generateSlug } from '../../utils/slug.js';
+import Doctor from '../../models/doctor.model.js';
 
 /**
  * @swagger
@@ -388,5 +389,25 @@ const deleteSpecialty = async (req, res) => {
     });
   }
 };
+
+export const getSpecialtyWithDoctors = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const specialty = await Specialty.findById(id);
+        if (!specialty) return res.status(404).json({ message: "Specialty not found" });
+
+        const doctors = await Doctor.find({ specialties: id }).select('full_name slug avatar');
+
+        res.json({
+            specialty,
+            doctors,
+            doctorCount: doctors.length
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 export { createSpecialty, getAllSpecialties, getSpecialtyBySlug, updateSpecialty, deleteSpecialty };
