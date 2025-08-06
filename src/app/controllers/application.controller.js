@@ -2,6 +2,10 @@ import Application from '../../models/application.model.js';
 import { paginate, getPaginationParams } from '../../utils/pagination.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const applicationController = {
   /**
@@ -73,8 +77,16 @@ const applicationController = {
         email: email.toLowerCase().trim(),
         phone: phone.trim(),
         coverLetter: coverLetter || '',
-        cvFileUrl: req.file ? req.file.path : null
+        cvFileUrl: req.file ? req.file.filename : null
       };
+
+      console.log('File upload info:', req.file ? {
+        originalname: req.file.originalname,
+        filename: req.file.filename,
+        path: req.file.path,
+        destination: req.file.destination,
+        savedToDatabase: req.file.filename
+      } : 'No file uploaded');
 
       const application = new Application(applicationData);
       await application.save();
@@ -517,6 +529,102 @@ const applicationController = {
       res.json({ message: 'Đã xóa đơn ứng tuyển' });
     } catch (err) {
       res.status(500).json({ error: err.message });
+    }
+  },
+
+  /**
+   * @swagger
+   * /api/applications/{id}/download-cv:
+   *   get:
+   *     summary: Download CV file
+   *     description: Download the CV file associated with an application
+   *     tags: [Applications]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Application ID
+   *     responses:
+   *       200:
+   *         description: CV file downloaded successfully
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       404:
+   *         description: Application or CV file not found
+   *       500:
+   *         description: Internal server error
+   */
+  downloadCV: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Find application
+      const application = await Application.findById(id);
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Đơn ứng tuyển không tồn tại'
+        });
+      }
+
+      // Check if CV file exists
+      if (!application.cvFileUrl) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy file CV'
+        });
+      }
+
+      console.log('Application cvFileUrl from database:', application.cvFileUrl);
+
+      // Build file path - Combine fixed uploads/pdfs path with filename from database
+      const filePath = path.resolve(__dirname, '../../../uploads/pdfs', application.cvFileUrl);
+      
+      console.log('Checking file path:', filePath);
+      
+      // Check if file exists on disk
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'File CV không tồn tại trên server',
+          filePath: filePath
+        });
+      }
+
+      // Set headers for file download
+      const safeName = application.name.replace(/[^a-zA-Z0-9]/g, '_'); // Remove special characters
+      const fileName = `CV_${safeName}_${application._id}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(filePath);
+      
+      fileStream.on('error', (error) => {
+        console.error('File stream error:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ 
+            success: false,
+            message: 'Lỗi khi đọc file CV' 
+          });
+        }
+      });
+
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error('Download CV error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi server khi tải xuống CV'
+      });
     }
   }
 };

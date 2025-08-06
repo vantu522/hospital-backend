@@ -16,6 +16,7 @@ router.post('/', uploadPDF.single('cvFile'), applicationController.createApplica
 // router.delete('/:id', authenticateToken, requireAdmin, applicationController.deleteApplication);
 
 router.get('/', applicationController.getAllApplications);
+router.get('/:id/download-cv', applicationController.downloadCV);
 router.get('/:id', applicationController.getApplicationById);
 router.patch('/:id/status', applicationController.updateApplicationStatus);
 router.put('/:id', uploadPDF.single('cvFile'), applicationController.updateApplication);
