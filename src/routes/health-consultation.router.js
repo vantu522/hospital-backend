@@ -18,7 +18,7 @@ router.get('/slug/:slug', getHealthConsultationBySlug);
 router.get('/:id', getHealthConsultationById);
 
 router.post('/', upload.single('image'), createHealthConsultation);
-router.put('/:id', updateHealthConsultation);
+router.put('/:id', upload.single('image'), updateHealthConsultation);
 router.delete('/:id', deleteHealthConsultation);
 
 export default router;

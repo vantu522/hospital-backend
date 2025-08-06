@@ -337,24 +337,34 @@ const getNewsById = async (req, res) => {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
  *               title:
  *                 type: string
+ *                 description: News title
  *               description:
  *                 type: string
+ *                 description: Short description
  *               content:
  *                 type: string
+ *                 description: News content
  *               category:
  *                 type: string
+ *                 description: News category
  *               tags:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: News tags
  *               is_active:
  *                 type: boolean
+ *                 description: Is article active
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: New featured image (optional)
  *     responses:
  *       200:
  *         description: News updated successfully
@@ -368,13 +378,75 @@ const getNewsById = async (req, res) => {
 const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('Update news request - ID:', id);
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file ? {
+      filename: req.file.filename,
+      path: req.file.path,
+      originalname: req.file.originalname
+    } : 'No file uploaded');
+
+    // Tìm bài viết hiện tại
+    const currentNews = await News.findById(id);
+    if (!currentNews) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy bài viết'
+      });
+    }
+
     const updateData = { ...req.body };
 
-    // Nếu title thay đổi, tạo slug mới
-    if (updateData.title) {
-      const slug = generateSlug(updateData.title);
-      updateData.slug = slug;
+    // Xử lý tags nếu có
+    if (req.body.tags) {
+      const processedTags = Array.isArray(req.body.tags) 
+        ? req.body.tags 
+        : req.body.tags.split(',').map(tag => tag.trim());
+      updateData.tags = processedTags;
     }
+
+    // Xử lý title và slug nếu có
+    if (updateData.title && updateData.title.trim() !== '') {
+      const newTitle = updateData.title.trim();
+      const newSlug = generateSlug(newTitle);
+      
+      // Kiểm tra slug trùng với bài viết khác (trừ bài viết hiện tại)
+      if (newSlug !== currentNews.slug) {
+        const existingNews = await News.findOne({ 
+          slug: newSlug, 
+          _id: { $ne: id } 
+        });
+        if (existingNews) {
+          updateData.slug = `${newSlug}-${Date.now()}`;
+        } else {
+          updateData.slug = newSlug;
+        }
+      }
+      updateData.title = newTitle;
+    }
+
+    // Xử lý ảnh mới nếu có
+    if (req.file) {
+      updateData.image = req.file.path;
+      console.log('New image path:', req.file.path);
+      
+      // TODO: Có thể xóa ảnh cũ nếu cần
+      // if (currentNews.image && currentNews.image !== req.file.path) {
+      //   try {
+      //     const oldImagePath = path.resolve(currentNews.image);
+      //     if (fs.existsSync(oldImagePath)) {
+      //       fs.unlinkSync(oldImagePath);
+      //     }
+      //   } catch (error) {
+      //     console.log('Error deleting old image:', error);
+      //   }
+      // }
+    }
+
+    updateData.updatedAt = new Date();
+
+    console.log('Final update data:', updateData);
 
     const updatedNews = await News.findByIdAndUpdate(
       id, 
