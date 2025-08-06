@@ -103,7 +103,6 @@ const createNews = async (req, res) => {
       description: description.trim(),
       content: content.trim(),
       image: imageUrl,
-      author: req.user.name, // Lấy tên từ token
       category: category.trim(),
       tags: processedTags,
       publish_date: new Date(),

@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 
 const recruitmentSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  slug: {
+    type: String,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
   position: String,
   specialty_id: {
     type: mongoose.Schema.Types.ObjectId,

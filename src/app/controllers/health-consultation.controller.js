@@ -1,6 +1,7 @@
 import HealthConsultation from '../../models/health-consultation.model.js';
 import Specialty from '../../models/specialty.model.js';
 import { paginate } from '../../utils/pagination.js';
+import { generateSlug } from '../../utils/slug.js';
 
 /**
  * @swagger
@@ -17,15 +18,20 @@ import { paginate } from '../../utils/pagination.js';
  *           schema:
  *             type: object
  *             required:
+ *               - title
  *               - description
- *               - department_id
+ *               - specialty_id
  *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Health consultation title
+ *                 example: "Tư vấn sức khỏe tim mạch"
  *               description:
  *                 type: string
  *                 description: Health consultation description
- *               department_id:
+ *               specialty_id:
  *                 type: string
- *                 description: Department ID
+ *                 description: Specialty ID
  *               image:
  *                 type: string
  *                 format: binary
@@ -42,15 +48,15 @@ import { paginate } from '../../utils/pagination.js';
  */
 const createHealthConsultation = async (req, res) => {
   try {
-    const { description, specialty_id } = req.body;
+    const { title, description, specialty_id } = req.body;
     // Cloudinary sẽ trả về url trong req.file.path
     const imageUrl = req.file?.path || '';
 
     // Validation - Kiểm tra tất cả field bắt buộc
-    if (!description || !specialty_id) {
+    if (!title || !description || !specialty_id) {
       return res.status(400).json({
         success: false,
-        message: 'Tất cả các trường đều bắt buộc: description, specialty_id'
+        message: 'Tất cả các trường đều bắt buộc: title, description, specialty_id'
       });
     }
 
@@ -70,7 +76,21 @@ const createHealthConsultation = async (req, res) => {
       });
     }
 
+    // Generate slug từ title
+    const slug = generateSlug(title);
+
+    // Kiểm tra slug đã tồn tại chưa
+    const existingConsultation = await HealthConsultation.findOne({ slug });
+    if (existingConsultation) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+      });
+    }
+
     const consultationData = {
+      title: title.trim(),
+      slug,
       image: imageUrl, // Cloudinary URL từ req.file.path
       description: description.trim(),
       specialty_id,
@@ -91,6 +111,15 @@ const createHealthConsultation = async (req, res) => {
 
   } catch (error) {
     console.error('Create health consultation error:', error);
+    
+    // Xử lý lỗi duplicate slug
+    if (error.code === 11000 && error.keyPattern?.slug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Lỗi server',
@@ -119,10 +148,10 @@ const createHealthConsultation = async (req, res) => {
  *           default: 10
  *         description: Number of items per page
  *       - in: query
- *         name: department_id
+ *         name: specialty_id
  *         schema:
  *           type: string
- *         description: Filter by department ID
+ *         description: Filter by specialty ID
  *     responses:
  *       200:
  *         description: List of health consultations
@@ -229,9 +258,12 @@ const getHealthConsultationById = async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Health consultation title
  *               description:
  *                 type: string
- *               department_id:
+ *               specialty_id:
  *                 type: string
  *               is_active:
  *                 type: boolean
@@ -249,6 +281,27 @@ const updateHealthConsultation = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
+
+    // Nếu có title mới, tạo slug mới
+    if (updateData.title) {
+      updateData.title = updateData.title.trim();
+      const newSlug = generateSlug(updateData.title);
+      
+      // Kiểm tra slug mới có trung với consultation khác không (trừ chính nó)
+      const existingConsultation = await HealthConsultation.findOne({ 
+        slug: newSlug, 
+        _id: { $ne: id } 
+      });
+      
+      if (existingConsultation) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+        });
+      }
+      
+      updateData.slug = newSlug;
+    }
 
     // Nếu có specialty_id mới, kiểm tra tồn tại
     if (updateData.specialty_id) {
@@ -282,6 +335,15 @@ const updateHealthConsultation = async (req, res) => {
 
   } catch (error) {
     console.error('Update health consultation error:', error);
+    
+    // Xử lý lỗi duplicate slug
+    if (error.code === 11000 && error.keyPattern?.slug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiêu đề này đã tồn tại, vui lòng chọn tiêu đề khác'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Lỗi server',
@@ -341,10 +403,60 @@ const deleteHealthConsultation = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/health-consultations/slug/{slug}:
+ *   get:
+ *     summary: Get health consultation by slug
+ *     tags: [Health Consultations]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Health consultation slug
+ *         example: "tu-van-suc-khoe-tim-mach"
+ *     responses:
+ *       200:
+ *         description: Health consultation details
+ *       404:
+ *         description: Health consultation not found
+ */
+const getHealthConsultationBySlug = async (req, res) => {
+  try {
+    const consultation = await HealthConsultation.findOne({ 
+      slug: req.params.slug,
+      is_active: true 
+    }).populate('specialty_id', 'name description');
+    
+    if (!consultation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tư vấn sức khỏe'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: consultation
+    });
+
+  } catch (error) {
+    console.error('Get health consultation by slug error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
 export { 
   createHealthConsultation, 
   getAllHealthConsultations, 
   getHealthConsultationById, 
+  getHealthConsultationBySlug,
   updateHealthConsultation, 
   deleteHealthConsultation 
 };
