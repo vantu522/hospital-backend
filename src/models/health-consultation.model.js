@@ -12,10 +12,10 @@ const healthConsultationSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
-  department_id: {
+  specialty_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Department',
-    required: [true, 'Department is required']
+    ref: 'Specialty',
+    required: [true, 'Specialty is required']
   },
   is_active: {
     type: Boolean,
@@ -27,12 +27,12 @@ const healthConsultationSchema = new mongoose.Schema({
 });
 
 // Create indexes
-healthConsultationSchema.index({ department_id: 1 });
+healthConsultationSchema.index({ specialty_id: 1 });
 healthConsultationSchema.index({ is_active: 1 });
 healthConsultationSchema.index({ createdAt: -1 });
 
 // NOTE: Khi sử dụng, chỉ populate field 'name' để tránh tràn data:
-// .populate('department_id', 'name')
+// .populate('specialty_id', 'name')
 
 const HealthConsultation = mongoose.model('HealthConsultation', healthConsultationSchema);
 

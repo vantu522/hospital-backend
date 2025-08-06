@@ -9,6 +9,8 @@ const recruitmentSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+
+
 const Recruitment = mongoose.model('Recruitment', recruitmentSchema);
 
 export default Recruitment;

@@ -1,5 +1,5 @@
 import HealthConsultation from '../../models/health-consultation.model.js';
-import Department from '../../models/department.model.js';
+import Specialty from '../../models/specialty.model.js';
 import { paginate } from '../../utils/pagination.js';
 
 /**
@@ -42,15 +42,15 @@ import { paginate } from '../../utils/pagination.js';
  */
 const createHealthConsultation = async (req, res) => {
   try {
-    const { description, department_id } = req.body;
+    const { description, specialty_id } = req.body;
     // Cloudinary sẽ trả về url trong req.file.path
     const imageUrl = req.file?.path || '';
 
     // Validation - Kiểm tra tất cả field bắt buộc
-    if (!description || !department_id) {
+    if (!description || !specialty_id) {
       return res.status(400).json({
         success: false,
-        message: 'Tất cả các trường đều bắt buộc: description, department_id'
+        message: 'Tất cả các trường đều bắt buộc: description, specialty_id'
       });
     }
 
@@ -61,27 +61,27 @@ const createHealthConsultation = async (req, res) => {
       });
     }
 
-    // Kiểm tra department có tồn tại không
-    const department = await Department.findById(department_id);
-    if (!department) {
+    // Kiểm tra specialty có tồn tại không
+    const specialty = await Specialty.findById(specialty_id);
+    if (!specialty) {
       return res.status(400).json({
         success: false,
-        message: 'Khoa không tồn tại'
+        message: 'Chuyên khoa không tồn tại'
       });
     }
 
     const consultationData = {
       image: imageUrl, // Cloudinary URL từ req.file.path
       description: description.trim(),
-      department_id,
+      specialty_id,
       is_active: true
     };
 
     const consultation = await HealthConsultation.create(consultationData);
 
-    // Populate department name khi trả về
+    // Populate specialty name khi trả về
     const populatedConsultation = await HealthConsultation.findById(consultation._id)
-      .populate('department_id', 'name');
+      .populate('specialty_id', 'name');
 
     res.status(201).json({
       success: true,
@@ -129,14 +129,14 @@ const createHealthConsultation = async (req, res) => {
  */
 const getAllHealthConsultations = async (req, res) => {
   try {
-    const { department_id } = req.query;
+    const { specialty_id } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
     // Build query - lấy tất cả consultations active
     const query = { is_active: true };
-    if (department_id) {
-      query.department_id = department_id;
+    if (specialty_id) {
+      query.specialty_id = specialty_id;
     }
 
     // Sử dụng pagination utility với populate
@@ -145,7 +145,7 @@ const getAllHealthConsultations = async (req, res) => {
       limit: Math.min(limit, 100),
       sort: { createdAt: -1 },
       populate: [
-        { path: 'department_id', select: 'name' } // Chỉ lấy name để tránh tràn data
+        { path: 'specialty_id', select: 'name' } // Chỉ lấy name để tránh tràn data
       ]
     });
 
@@ -183,7 +183,7 @@ const getAllHealthConsultations = async (req, res) => {
 const getHealthConsultationById = async (req, res) => {
   try {
     const consultation = await HealthConsultation.findById(req.params.id)
-      .populate('department_id', 'name description');
+      .populate('specialty_id', 'name description');
     
     if (!consultation) {
       return res.status(404).json({
@@ -250,13 +250,13 @@ const updateHealthConsultation = async (req, res) => {
     const { id } = req.params;
     const updateData = { ...req.body };
 
-    // Nếu có department_id mới, kiểm tra tồn tại
-    if (updateData.department_id) {
-      const department = await Department.findById(updateData.department_id);
-      if (!department) {
+    // Nếu có specialty_id mới, kiểm tra tồn tại
+    if (updateData.specialty_id) {
+      const specialty = await Specialty.findById(updateData.specialty_id);
+      if (!specialty) {
         return res.status(400).json({
           success: false,
-          message: 'Khoa không tồn tại'
+          message: 'Chuyên khoa không tồn tại'
         });
       }
     }
@@ -265,7 +265,7 @@ const updateHealthConsultation = async (req, res) => {
       id, 
       updateData, 
       { new: true, runValidators: true }
-    ).populate('department_id', 'name');
+    ).populate('specialty_id', 'name');
 
     if (!updatedConsultation) {
       return res.status(404).json({
