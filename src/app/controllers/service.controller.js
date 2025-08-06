@@ -29,7 +29,7 @@ class ServiceController {
 
   async getAllServices(req, res) {
     try {
-      const services = await Service.find();
+      const services = await Service.find().populate("specialties", "name slug");
       res.status(200).json(services);
     } catch (error) {
       res.status(500).json({ message: error.message });

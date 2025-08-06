@@ -69,6 +69,7 @@ const recruitmentController = {
       res.status(500).json({ error: err.message });
     }
   },
+  
   getRecruitmentBySlug: async (req, res) => {
     try {
       const recruitment = await Recruitment.findOne({ slug: req.params.slug });

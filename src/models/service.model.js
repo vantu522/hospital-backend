@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const serviceSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  specialties: { type: String, required: true },
+  specialties: { type: mongoose.Schema.Types.ObjectId, ref: 'Specialty' },
   description: { type: String, required: false },
   slug: { type: String, required: true, unique: true },
   avatar: { type: String, required: false },
