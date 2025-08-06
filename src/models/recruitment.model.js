@@ -28,6 +28,10 @@ const recruitmentSchema = new mongoose.Schema({
   expiry_date: {
     type: Date,
     required: [true, 'Expiry date is required']
+  },
+  document: {
+    type: String, // File path for uploaded document
+    trim: true
   }
 }, {
   timestamps: true
@@ -36,6 +40,7 @@ const recruitmentSchema = new mongoose.Schema({
 // Create indexes - chỉ index cần thiết
 recruitmentSchema.index({ specialty_id: 1 });
 recruitmentSchema.index({ expiry_date: 1 }); // Để query recruitment còn hiệu lực
+recruitmentSchema.index({ slug: 1 }, { unique: true }); // Index cho slug lookup
 
 // NOTE: Khi sử dụng, chỉ populate field 'name' để tránh tràn data:
 // .populate('specialty_id', 'name')

@@ -15,7 +15,7 @@ router.get('/:id', getNewsById);
 // router.delete('/:id', authenticateToken, requireAdmin, deleteNews);
 
 router.post('/', upload.single('image'), createNews);
-router.put('/:id', updateNews);
+router.put('/:id',upload.single('image'), updateNews);
 router.delete('/:id', deleteNews);
 
 export default router;
