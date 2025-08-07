@@ -15,6 +15,7 @@ serviceRouter.post(
   serviceController.createService
 );
 serviceRouter.get("/",serviceController.getAllServices);
+serviceRouter.get("/specialty/:specialtyId", serviceController.getServicesBySpecialty);
 serviceRouter.get("/slug/:slug", serviceController.getServiceBySlug);
 serviceRouter.put(
   "/:id",
