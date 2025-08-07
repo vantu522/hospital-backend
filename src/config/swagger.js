@@ -501,6 +501,32 @@ const options = {
             }
           }
         },
+        BackgroundBanner: {
+          type: 'object',
+          required: ['image', 'description'],
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'Background banner ID'
+            },
+            image: {
+              type: 'string',
+              description: 'Banner image URL from Cloudinary'
+            },
+            description: {
+              type: 'string',
+              description: 'Banner description'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
         Error: {
           type: 'object',
           properties: {

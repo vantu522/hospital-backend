@@ -9,6 +9,7 @@ import contactRouter from "./contact.router.js";
 import informationRouter from "./information.router.js";
 import healthConsultationRouter from "./health-consultation.router.js";
 import applicationRouter from "./application.router.js";
+import backgroundBannerRouter from "./background-banner.router.js";
 
 
 function route(app){
@@ -23,6 +24,7 @@ function route(app){
     app.use('/api/informations', informationRouter);
     app.use('/api/health-consultations', healthConsultationRouter);
     app.use('/api/applications', applicationRouter);
+    app.use('/api/background-banners', backgroundBannerRouter);
 }
 
 export default route;
