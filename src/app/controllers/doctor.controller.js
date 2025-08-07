@@ -85,3 +85,27 @@ export const deleteDoctor = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+export const getDoctorsBySpecialty = async (req, res) => {
+  try {
+    const { specialtyId } = req.params;
+
+    // Tìm bác sĩ theo ID của chuyên khoa
+    const doctors = await Doctor.find({ 
+      specialties: specialtyId 
+    }).populate("specialties", "name slug");
+
+    if (doctors.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy bác sĩ nào thuộc chuyên khoa này",
+      });
+    }
+
+    res.json({
+      count: doctors.length,
+      doctors: doctors,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
