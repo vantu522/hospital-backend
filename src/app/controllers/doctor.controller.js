@@ -19,16 +19,24 @@ export const createDoctor = async (req, res) => {
 
 export const getAllDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find().populate("specialties", "name slug"); // lấy name và slug của chuyên khoa
+    const filter = {};
+
+    // Nếu có query specialty thì lọc theo chuyên khoa
+    if (req.query.specialty) {
+      filter.specialties = req.query.specialty;
+    }
+
+    const doctors = await Doctor.find(filter).populate("specialties", "name");
     res.json(doctors);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
+
 export const getDoctorBySlug = async (req, res) => {
   try {
-    const doctor = await Doctor.findOne({ slug: req.params.slug });
+    const doctor = await Doctor.findOne({ slug: req.params.slug }) .populate('specialties', 'name');;
     if (!doctor)
       return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
     res.json(doctor);
