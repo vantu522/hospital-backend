@@ -14,5 +14,7 @@ doctorRouter.put('/:id', upload.fields([
     { name: 'avatar', maxCount: 1 }
 ]) ,doctorController.updateDoctor);
 doctorRouter.delete('/:id', doctorController.deleteDoctor);
+doctorRouter.get("/five-doctors",doctorController.getFiveRandomDoctors);
+
 
 export default doctorRouter;

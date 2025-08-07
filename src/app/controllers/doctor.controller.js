@@ -1,5 +1,6 @@
 import { cloudinary, getPublicId } from "../../config/cloudinary.js";
 import Doctor from "../../models/doctor.model.js";
+import Specialty from "../../models/specialty.model.js";
 import { generateSlug } from "../../utils/slug.js";
 export const createDoctor = async (req, res) => {
   try {
@@ -117,3 +118,25 @@ export const getDoctorsBySpecialty = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+export const getFiveRandomDoctors = async (req, res) => {
+  try {
+    // Lấy danh sách 5 ID bác sĩ ngẫu nhiên
+    const randomDoctors = await Doctor.aggregate([
+      { $sample: { size: 5 } },
+      { $project: { _id: 1 } },
+    ]);
+
+    const ids = randomDoctors.map((doc) => doc._id);
+
+    // Dùng find + populate để lấy đầy đủ thông tin
+    const doctors = await Doctor.find({ _id: { $in: ids } }).populate("specialties", "name slug");
+
+    res.json(doctors);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
