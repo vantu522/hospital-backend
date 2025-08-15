@@ -1,6 +1,7 @@
 import userRepository from '../repositories/user.repository.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import UserValidator from '../middlewares/user.validator.js';
 
 class UserService {
   /**
@@ -45,15 +46,29 @@ class UserService {
   /**
    * Create new user
    */
-  async createUser(body) {
-    this.validateCreateData(body);
+  async createUser(body, creatorRole) {
+    // Validate data
+    const dataValidation = UserValidator.validateCreate(body);
+    if (!dataValidation.isValid) {
+      throw new Error(dataValidation.errors.join(', '));
+    }
+
+    // Check email exists
     await this.checkEmailExists(body.email);
+    
+    const targetRole = body.role || 'admin';
+    
+    // Check permissions
+    const permissionValidation = UserValidator.validateCreatePermissions(creatorRole, targetRole);
+    if (!permissionValidation.isValid) {
+      throw new Error(permissionValidation.errors.join(', '));
+    }
     
     const userData = {
       name: body.name.trim(),
       email: body.email.toLowerCase().trim(),
       password: body.password,
-      role: body.role || 'user'
+      role: targetRole
     };
 
     return await userRepository.create(userData);
@@ -62,19 +77,8 @@ class UserService {
   /**
    * Get all users
    */
-  async getAllUsers(role = null) {
-    if (role) {
-      switch (role) {
-        case 'admin':
-          return await userRepository.findAdmins();
-        case 'doctor':
-          return await userRepository.findDoctors();
-        case 'user':
-          return await userRepository.findUsers();
-        default:
-          return await userRepository.find();
-      }
-    }
+  async getAllUsers() {
+  
     return await userRepository.find();
   }
 
@@ -126,8 +130,14 @@ class UserService {
   /**
    * Update user
    */
-  async updateUser(id, body) {
+  async updateUser(id, body, updaterRole) {
     const user = await this.getUserById(id);
+    
+    // Validate data
+    const dataValidation = UserValidator.validateUpdate(body);
+    if (!dataValidation.isValid) {
+      throw new Error(dataValidation.errors.join(', '));
+    }
     
     const updateData = {};
     
@@ -151,6 +161,11 @@ class UserService {
     }
 
     if (body.role !== undefined) {
+      // Check permissions for role update
+      const permissionValidation = UserValidator.validateUpdatePermissions(updaterRole, user.role, body.role);
+      if (!permissionValidation.isValid) {
+        throw new Error(permissionValidation.errors.join(', '));
+      }
       updateData.role = body.role;
     }
 
@@ -160,8 +175,15 @@ class UserService {
   /**
    * Delete user
    */
-  async deleteUser(id) {
-    await this.getUserById(id);
+  async deleteUser(id, deleterRole) {
+    const user = await this.getUserById(id);
+    
+    // Check permissions
+    const permissionValidation = UserValidator.validateDeletePermissions(deleterRole, user.role);
+    if (!permissionValidation.isValid) {
+      throw new Error(permissionValidation.errors.join(', '));
+    }
+    
     await userRepository.deleteById(id);
     return { message: 'Đã xóa người dùng thành công' };
   }
@@ -172,9 +194,9 @@ class UserService {
   async getUserStats() {
     const stats = await userRepository.getUserStats();
     const result = {
+      superadmin: 0,
       admin: 0,
-      doctor: 0,
-      user: 0,
+      receptionist: 0,
       total: 0
     };
 

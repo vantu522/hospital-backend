@@ -69,5 +69,5 @@ export const requireRole = (allowedRoles) => {
 // Middleware chỉ admin
 export const requireAdmin = requireRole(['admin']);
 
-// Middleware admin hoặc doctor  
-export const requireAdminOrDoctor = requireRole(['admin', 'doctor']);
+// Middleware admin hoặc superadmin
+export const requireAdminOrSuperadmin = requireRole(['admin', 'superadmin']);
