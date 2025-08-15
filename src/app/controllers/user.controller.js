@@ -1,7 +1,4 @@
-import User from '../../models/user.model.js'
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { JWT_SECRET, JWT_EXPIRES_IN } from '../../config/constants.js';
+import userService from '../services/user.service.js';
 
 // Tạo JWT token
 const generateToken = (user) => {
@@ -12,9 +9,7 @@ const generateToken = (user) => {
     name: user.name
   };
   
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN
-  });
+  return userService.generateToken(payload);
 };
 
 /**
@@ -42,8 +37,12 @@ const generateToken = (user) => {
  *               $ref: '#/components/schemas/Error'
  */
 export const getUsers = async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+  try {
+    const users = await userService.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 /**
@@ -112,59 +111,19 @@ export const getUsers = async (req, res) => {
  */
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
-
-    // Validation input
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tên, email và mật khẩu là bắt buộc'
-      });
-    }
-
-    // Kiểm tra email đã tồn tại
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email đã được sử dụng'
-      });
-    }
-
-    // Tạo user mới (password sẽ tự động hash trong model)
-    const userData = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password: password,
-      role: role || 'user' // mặc định là user
-    };
-
-    const newUser = await User.create(userData);
-
-    // Tạo JWT token
-    const token = generateToken(newUser);
-
-    // Trả về thông tin user (không có password)
-    const userResponse = {
-      id: newUser._id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-    };
-
+    const result = await userService.createUser(req.body);
     res.status(201).json({
       success: true,
       message: 'Tạo user thành công',
-      token: token,
-      user: userResponse
+      token: result.token,
+      user: result.user
     });
-
   } catch (error) {
     console.error('Create user error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('Email đã được sử dụng') ? 409 : 400;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message
     });
   }
 };
@@ -215,58 +174,19 @@ export const createUser = async (req, res) => {
  */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Validation input
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email và mật khẩu là bắt buộc'
-      });
-    }
-
-    // Tìm user theo email
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email hoặc mật khẩu không đúng'
-      });
-    }
-
-    // So sánh password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email hoặc mật khẩu không đúng'
-      });
-    }
-
-    // Tạo JWT token
-    const token = generateToken(user);
-
-    // Trả về thông tin user (không có password)
-    const userResponse = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
-
+    const result = await userService.login(req.body);
     res.status(200).json({
       success: true,
       message: 'Đăng nhập thành công',
-      token: token,
-      user: userResponse
+      token: result.token,
+      user: result.user
     });
-
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('không tồn tại') || error.message.includes('không đúng') ? 401 : 400;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message
     });
   }
 };

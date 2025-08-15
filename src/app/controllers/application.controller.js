@@ -1,11 +1,4 @@
-import Application from '../../models/application.model.js';
-import { paginate, getPaginationParams } from '../../utils/pagination.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import applicationService from '../services/application.service.js';
 
 const applicationController = {
   /**
@@ -63,47 +56,9 @@ const applicationController = {
    */
   createApplication: async (req, res) => {
     try {
-      const { name, email, phone, coverLetter } = req.body;
-      
-      // Validate required fields
-      if (!name || !email || !phone) {
-        return res.status(400).json({ 
-          error: 'Name, email, and phone are required fields' 
-        });
-      }
-
-      const applicationData = {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone.trim(),
-        coverLetter: coverLetter || '',
-        cvFileUrl: req.file ? req.file.filename : null
-      };
-
-      console.log('File upload info:', req.file ? {
-        originalname: req.file.originalname,
-        filename: req.file.filename,
-        path: req.file.path,
-        destination: req.file.destination,
-        savedToDatabase: req.file.filename
-      } : 'No file uploaded');
-
-      const application = new Application(applicationData);
-      await application.save();
-      
-      res.status(201).json({
-        message: 'Application submitted successfully',
-        application
-      });
+      const result = await applicationService.createApplication(req.body, req.file);
+      res.status(201).json(result);
     } catch (err) {
-      // Delete uploaded file if application creation fails
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (deleteErr) {
-          console.error('Error deleting file:', deleteErr);
-        }
-      }
       res.status(400).json({ error: err.message });
     }
   },
@@ -194,20 +149,7 @@ const applicationController = {
    */
   getAllApplications: async (req, res) => {
     try {
-      const { status } = req.query;
-      
-      // Build filter
-      const filter = {};
-      if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-        filter.status = status;
-      }
-
-      // Get pagination parameters
-      const paginationOptions = getPaginationParams(req.query);
-
-      // Use pagination utility
-      const result = await paginate(Application, filter, paginationOptions);
-
+      const result = await applicationService.getAllApplications(req.query);
       res.json({
         applications: result.data,
         pagination: result.pagination
@@ -253,13 +195,11 @@ const applicationController = {
    */
   getApplicationById: async (req, res) => {
     try {
-      const application = await Application.findById(req.params.id);
-      if (!application) {
-        return res.status(404).json({ message: 'Không tìm thấy đơn ứng tuyển' });
-      }
+      const application = await applicationService.getApplicationById(req.params.id);
       res.json(application);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+      res.status(statusCode).json({ error: err.message });
     }
   },
 
@@ -315,30 +255,11 @@ const applicationController = {
    */
   updateApplicationStatus: async (req, res) => {
     try {
-      const { status } = req.body;
-      
-      if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ 
-          error: 'Status must be one of: pending, approved, rejected' 
-        });
-      }
-
-      const application = await Application.findByIdAndUpdate(
-        req.params.id,
-        { status },
-        { new: true, runValidators: true }
-      );
-
-      if (!application) {
-        return res.status(404).json({ message: 'Không tìm thấy đơn ứng tuyển' });
-      }
-
-      res.json({
-        message: 'Application status updated successfully',
-        application
-      });
+      const result = await applicationService.updateApplicationStatus(req.params.id, req.body.status);
+      res.json(result);
     } catch (err) {
-      res.status(400).json({ error: err.message });
+      const statusCode = err.message.includes('Không tìm thấy') ? 404 : 400;
+      res.status(statusCode).json({ error: err.message });
     }
   },
 
@@ -410,64 +331,11 @@ const applicationController = {
    */
   updateApplication: async (req, res) => {
     try {
-      const updateData = {};
-      const { name, email, phone, coverLetter, status } = req.body;
-
-      // Build update object
-      if (name) updateData.name = name.trim();
-      if (email) updateData.email = email.toLowerCase().trim();
-      if (phone) updateData.phone = phone.trim();
-      if (coverLetter !== undefined) updateData.coverLetter = coverLetter;
-      if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-        updateData.status = status;
-      }
-
-      // Handle file upload
-      if (req.file) {
-        // Get current application to delete old file
-        const currentApplication = await Application.findById(req.params.id);
-        if (currentApplication && currentApplication.cvFileUrl) {
-          try {
-            fs.unlinkSync(currentApplication.cvFileUrl);
-          } catch (deleteErr) {
-            console.error('Error deleting old file:', deleteErr);
-          }
-        }
-        updateData.cvFileUrl = req.file.path;
-      }
-
-      const application = await Application.findByIdAndUpdate(
-        req.params.id,
-        updateData,
-        { new: true, runValidators: true }
-      );
-
-      if (!application) {
-        // Delete uploaded file if application not found
-        if (req.file && req.file.path) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (deleteErr) {
-            console.error('Error deleting file:', deleteErr);
-          }
-        }
-        return res.status(404).json({ message: 'Không tìm thấy đơn ứng tuyển' });
-      }
-
-      res.json({
-        message: 'Application updated successfully',
-        application
-      });
+      const result = await applicationService.updateApplication(req.params.id, req.body, req.file);
+      res.json(result);
     } catch (err) {
-      // Delete uploaded file if update fails
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (deleteErr) {
-          console.error('Error deleting file:', deleteErr);
-        }
-      }
-      res.status(400).json({ error: err.message });
+      const statusCode = err.message.includes('Không tìm thấy') ? 404 : 400;
+      res.status(statusCode).json({ error: err.message });
     }
   },
 
@@ -511,24 +379,11 @@ const applicationController = {
    */
   deleteApplication: async (req, res) => {
     try {
-      const application = await Application.findById(req.params.id);
-      if (!application) {
-        return res.status(404).json({ message: 'Không tìm thấy đơn ứng tuyển' });
-      }
-
-      // Delete associated CV file
-      if (application.cvFileUrl) {
-        try {
-          fs.unlinkSync(application.cvFileUrl);
-        } catch (deleteErr) {
-          console.error('Error deleting file:', deleteErr);
-        }
-      }
-
-      await Application.findByIdAndDelete(req.params.id);
-      res.json({ message: 'Đã xóa đơn ứng tuyển' });
+      const result = await applicationService.deleteApplication(req.params.id);
+      res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+      res.status(statusCode).json({ error: err.message });
     }
   },
 
@@ -561,53 +416,15 @@ const applicationController = {
    */
   downloadCV: async (req, res) => {
     try {
-      const { id } = req.params;
+      const result = await applicationService.downloadCV(req.params.id);
       
-      // Find application
-      const application = await Application.findById(id);
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Đơn ứng tuyển không tồn tại'
-        });
-      }
-
-      // Check if CV file exists
-      if (!application.cvFileUrl) {
-        return res.status(404).json({
-          success: false,
-          message: 'Không tìm thấy file CV'
-        });
-      }
-
-      console.log('Application cvFileUrl from database:', application.cvFileUrl);
-
-      // Build file path - Combine fixed uploads/pdfs path with filename from database
-      const filePath = path.resolve(__dirname, '../../../uploads/pdfs', application.cvFileUrl);
-      
-      console.log('Checking file path:', filePath);
-      
-      // Check if file exists on disk
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({
-          success: false,
-          message: 'File CV không tồn tại trên server',
-          filePath: filePath
-        });
-      }
-
       // Set headers for file download
-      const safeName = application.name.replace(/[^a-zA-Z0-9]/g, '_'); // Remove special characters
-      const fileName = `CV_${safeName}_${application._id}.pdf`;
-      
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
       res.setHeader('Cache-Control', 'no-cache');
       
       // Stream the file
-      const fileStream = fs.createReadStream(filePath);
-      
-      fileStream.on('error', (error) => {
+      result.stream.on('error', (error) => {
         console.error('File stream error:', error);
         if (!res.headersSent) {
           res.status(500).json({ 
@@ -617,13 +434,14 @@ const applicationController = {
         }
       });
 
-      fileStream.pipe(res);
+      result.stream.pipe(res);
       
     } catch (error) {
       console.error('Download CV error:', error);
-      res.status(500).json({
+      const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+      res.status(statusCode).json({
         success: false,
-        message: 'Lỗi server khi tải xuống CV'
+        message: error.message
       });
     }
   }
