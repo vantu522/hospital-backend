@@ -1,5 +1,17 @@
 import express from 'express';
-import { createNews, getAllNews, getNewsById, getNewsBySlug, updateNews, deleteNews } from '../app/controllers/news.controller.js';
+import { 
+  createNews, 
+  getAllNews, 
+  getNewsById, 
+  getNewsBySlug, 
+  updateNews, 
+  deleteNews,
+  getLatestNews,
+  getFeaturedNews,
+  getNewsByCategory,
+  searchNews,
+  getNewsStatistics
+} from '../app/controllers/news.controller.js';
 // import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js'; // TODO: Uncomment for production
 import upload from '../app/middlewares/upload.js';
 
@@ -7,6 +19,11 @@ const router = express.Router();
 
 // Public routes - Mọi người có thể xem tin tức
 router.get('/', getAllNews);
+router.get('/latest', getLatestNews);
+router.get('/featured', getFeaturedNews);
+router.get('/search', searchNews);
+router.get('/statistics', getNewsStatistics);
+router.get('/category/:category', getNewsByCategory);
 router.get('/slug/:slug', getNewsBySlug);
 router.get('/:id', getNewsById);
 
