@@ -1,0 +1,16 @@
+import express from 'express';
+import healthInsuranceExamController from '../app/controllers/health-insurance-exam.controller.js';
+
+const router = express.Router();
+
+// Đặt lịch khám bảo hiểm y tế
+router.post('/book', healthInsuranceExamController.createExam);
+
+
+// Check hiệu lực lịch khám bằng mã QR (encoded_id qua path)
+router.get('/check/:encoded_id', healthInsuranceExamController.checkExamByEncodedId);
+
+// Lấy lịch khám theo id
+router.get('/:id', healthInsuranceExamController.getExamById);
+
+export default router;

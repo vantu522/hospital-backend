@@ -1,7 +1,4 @@
-import { cloudinary, getPublicId } from '../../config/cloudinary.js';
-import Specialty from '../../models/specialty.model.js';
-import { generateSlug } from '../../utils/slug.js';
-import Doctor from '../../models/doctor.model.js';
+import specialtyService from '../services/specialty.service.js';
 
 /**
  * @swagger
@@ -49,26 +46,7 @@ import Doctor from '../../models/doctor.model.js';
  */
 const createSpecialty = async (req, res) => {
   try {
-    const { name, description, functions } = req.body;
-
-    // Validation - Kiểm tra field bắt buộc
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tên chuyên khoa là bắt buộc'
-      });
-    }
-
-    const specialtyData = {
-      name: name.trim(),
-      description: description ? description.trim() : '',
-      functions: Array.isArray(functions) ? functions : (functions ? functions.split(',').map(f => f.trim()) : []),
-      slug: generateSlug(name),
-      images: req.files?.images ? req.files.images.map(file => file.path) : [],
-      is_active: true
-    };
-
-    const specialty = await Specialty.create(specialtyData);
+    const specialty = await specialtyService.createSpecialty(req.body, req.files);
 
     res.status(201).json({
       success: true,
@@ -78,10 +56,9 @@ const createSpecialty = async (req, res) => {
 
   } catch (error) {
     console.error('Create specialty error:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message || 'Lỗi tạo chuyên khoa'
     });
   }
 };
@@ -132,10 +109,7 @@ const createSpecialty = async (req, res) => {
  */
 const getAllSpecialties = async (req, res) => {
   try {
-    // Lấy tất cả specialties không điều kiện
-    const specialties = await Specialty.find({})
-      .select('name description functions images slug is_active') // Chỉ lấy các field cần thiết
-      .sort({ name: 1 }); // Sắp xếp theo tên A-Z
+    const specialties = await specialtyService.getAllSpecialties();
 
     res.json({
       success: true,
@@ -146,8 +120,7 @@ const getAllSpecialties = async (req, res) => {
     console.error('Get specialties error:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message || 'Lỗi server'
     });
   }
 };
@@ -173,14 +146,7 @@ const getAllSpecialties = async (req, res) => {
  */
 const getSpecialtyBySlug = async (req, res) => {
   try {
-    const specialty = await Specialty.findOne({ slug: req.params.slug });
-    
-    if (!specialty) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy chuyên khoa'
-      });
-    }
+    const specialty = await specialtyService.getSpecialtyBySlug(req.params.slug);
 
     res.json({
       success: true,
@@ -189,10 +155,9 @@ const getSpecialtyBySlug = async (req, res) => {
 
   } catch (error) {
     console.error('Get specialty by slug error:', error);
-    res.status(500).json({
+    res.status(404).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message || 'Không tìm thấy chuyên khoa'
     });
   }
 };
@@ -246,53 +211,10 @@ const getSpecialtyBySlug = async (req, res) => {
  */
 const updateSpecialty = async (req, res) => {
   try {
-    const specialty = await Specialty.findById(req.params.id);
-    if (!specialty) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy chuyên khoa'
-      });
-    }
-
-    const imageFiles = req.files?.images || [];
-    const updateData = {};
-
-    // Chỉ thêm các field có trong request
-    if (req.body.name !== undefined) {
-      updateData.name = req.body.name.trim();
-      updateData.slug = generateSlug(req.body.name); // Tự động tạo slug khi có name
-    }
-
-    if (req.body.description !== undefined) {
-      updateData.description = req.body.description.trim();
-    }
-
-    if (req.body.functions !== undefined) {
-      updateData.functions = Array.isArray(req.body.functions) ? 
-        req.body.functions : 
-        req.body.functions.split(',').map(f => f.trim());
-    }
-
-    if (req.body.is_active !== undefined) {
-      updateData.is_active = req.body.is_active;
-    }
-
-    // Nếu có ảnh mới -> xóa ảnh cũ trước
-    if (imageFiles.length > 0) {
-      if (Array.isArray(specialty.images)) {
-        for (const img of specialty.images) {
-          const publicId = getPublicId(img);
-          await cloudinary.uploader.destroy(publicId);
-        }
-      }
-      // Cập nhật ảnh mới
-      updateData.images = imageFiles.map((file) => file.path);
-    }
-
-    const updatedSpecialty = await Specialty.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
+    const updatedSpecialty = await specialtyService.updateSpecialty(
+      req.params.id, 
+      req.body, 
+      req.files
     );
 
     res.json({
@@ -303,10 +225,10 @@ const updateSpecialty = async (req, res) => {
 
   } catch (error) {
     console.error('Update specialty error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 400;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message || 'Lỗi cập nhật chuyên khoa'
     });
   }
 };
@@ -340,73 +262,35 @@ const updateSpecialty = async (req, res) => {
  */
 const deleteSpecialty = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // Kiểm tra specialty có tồn tại không
-    const specialty = await Specialty.findById(id);
-    if (!specialty) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy chuyên khoa'
-      });
-    }
-
-    // Kiểm tra xem có health consultation nào đang sử dụng specialty này không
-    const { default: HealthConsultation } = await import('../../models/health-consultation.model.js');
-    const existingConsultations = await HealthConsultation.findOne({ 
-      specialty_id: id,
-      is_active: true 
-    });
-
-    if (existingConsultations) {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể xóa chuyên khoa này vì đang có tư vấn sức khỏe liên quan'
-      });
-    }
-
-    // Xóa ảnh trên Cloudinary trước
-    if (Array.isArray(specialty.images)) {
-      for (const img of specialty.images) {
-        const publicId = getPublicId(img);
-        await cloudinary.uploader.destroy(publicId);
-      }
-    }
-
-    await Specialty.findByIdAndDelete(id);
+    const result = await specialtyService.deleteSpecialty(req.params.id);
 
     res.json({
       success: true,
-      message: 'Xóa chuyên khoa thành công'
+      message: result.message
     });
 
   } catch (error) {
     console.error('Delete specialty error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 400;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message || 'Lỗi xóa chuyên khoa'
     });
   }
 };
 
 export const getSpecialtyWithDoctors = async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const specialty = await Specialty.findById(id);
-        if (!specialty) return res.status(404).json({ message: "Specialty not found" });
+  try {
+    const result = await specialtyService.getSpecialtyWithDoctors(req.params.id);
 
-        const doctors = await Doctor.find({ specialties: id }).select('full_name slug avatar');
-
-        res.json({
-            specialty,
-            doctors,
-            doctorCount: doctors.length
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    res.json(result);
+  } catch (error) {
+    console.error('Get specialty with doctors error:', error);
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({
+      message: error.message || 'Lỗi server'
+    });
+  }
 };
 
 

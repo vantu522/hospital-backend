@@ -1,138 +1,291 @@
-import { cloudinary, getPublicId } from "../../config/cloudinary.js";
-import Doctor from "../../models/doctor.model.js";
-import Specialty from "../../models/specialty.model.js";
-import { generateSlug } from "../../utils/slug.js";
+import doctorService from '../services/doctor.service.js';
+
+/**
+ * @swagger
+ * /api/doctors:
+ *   post:
+ *     summary: Create a new doctor (Admin only)
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - full_name
+ *               - specialties
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *                 description: Doctor's full name
+ *               specialties:
+ *                 type: string
+ *                 description: Doctor's specialties
+ *               hospital:
+ *                 type: string
+ *                 description: Hospital name
+ *               department:
+ *                 type: string
+ *                 description: Department
+ *               degree:
+ *                 type: string
+ *                 description: Medical degree
+ *               description:
+ *                 type: string
+ *                 description: Doctor description
+ *               phone_number:
+ *                 type: string
+ *                 description: Phone number
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address
+ *               work_address:
+ *                 type: string
+ *                 description: Work address
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: Doctor's avatar
+ *     responses:
+ *       201:
+ *         description: Doctor created successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
 export const createDoctor = async (req, res) => {
   try {
-    const avatarFile = req.files?.avatar?.[0];
-    const doctorData = {
-      ...req.body,
-      slug: generateSlug(req.body.full_name), // Tạo slug từ tên bác sĩ
-      avatar: avatarFile?.path || "", // Link từ Cloudinary
-    };
-    const doctor = new Doctor(doctorData);
-    await doctor.save();
-    res.status(201).json(doctor);
+    const result = await doctorService.createDoctor(req.body, req.files);
+    res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
+/**
+ * @swagger
+ * /api/doctors:
+ *   get:
+ *     summary: Get all doctors
+ *     tags: [Doctors]
+ *     parameters:
+ *       - in: query
+ *         name: specialties
+ *         schema:
+ *           type: string
+ *         description: Filter by specialties
+ *       - in: query
+ *         name: hospital
+ *         schema:
+ *           type: string
+ *         description: Filter by hospital
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *     responses:
+ *       200:
+ *         description: List of doctors
+ *       500:
+ *         description: Server error
+ */
 export const getAllDoctors = async (req, res) => {
   try {
-    const filter = {};
-
-    // Nếu có query specialty thì lọc theo chuyên khoa
-    if (req.query.specialty) {
-      filter.specialties = req.query.specialty;
-    }
-
-    const doctors = await Doctor.find(filter).populate("specialties", "name");
+    const doctors = await doctorService.getAllDoctors(req.query);
     res.json(doctors);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-
+/**
+ * @swagger
+ * /api/doctors/slug/{slug}:
+ *   get:
+ *     summary: Get doctor by slug
+ *     tags: [Doctors]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor slug
+ *     responses:
+ *       200:
+ *         description: Doctor details
+ *       404:
+ *         description: Doctor not found
+ *       500:
+ *         description: Server error
+ */
 export const getDoctorBySlug = async (req, res) => {
   try {
-    const doctor = await Doctor.findOne({ slug: req.params.slug }) .populate('specialties', 'name');;
-    if (!doctor)
-      return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
+    const doctor = await doctorService.getDoctorBySlug(req.params.slug);
     res.json(doctor);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({ error: err.message });
   }
 };
 
+/**
+ * @swagger
+ * /api/doctors/{id}:
+ *   put:
+ *     summary: Update doctor by ID (Admin only)
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *               specialties:
+ *                 type: string
+ *               hospital:
+ *                 type: string
+ *               department:
+ *                 type: string
+ *               degree:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               phone_number:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               work_address:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Doctor updated successfully
+ *       404:
+ *         description: Doctor not found
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
 export const updateDoctor = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.params.id);
-    if (!doctor) {
-      return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
-    }
-
-    const avatarFile = req.files?.avatar?.[0];
-
-    const updatedData = {
-      ...req.body,
-      slug: generateSlug(req.body.full_name),
-    };
-
-    if (avatarFile) {
-      if (doctor.avatar) {
-        const publicId = getPublicId(doctor.avatar);
-        await cloudinary.uploader.destroy(publicId);
-      }
-      updatedData.avatar = avatarFile.path;
-    }
-
-    const updated = await Doctor.findByIdAndUpdate(req.params.id, updatedData, {
-      new: true,
-    });
-    if (!updated)
-      return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
-    res.json(updated);
+    const result = await doctorService.updateDoctor(req.params.id, req.body, req.files);
+    res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 400;
+    res.status(statusCode).json({ error: err.message });
   }
 };
 
+/**
+ * @swagger
+ * /api/doctors/{id}:
+ *   delete:
+ *     summary: Delete doctor by ID (Admin only)
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor ID
+ *     responses:
+ *       200:
+ *         description: Doctor deleted successfully
+ *       404:
+ *         description: Doctor not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
 export const deleteDoctor = async (req, res) => {
   try {
-    const deleted = await Doctor.findByIdAndDelete(req.params.id);
-    if (!deleted)
-      return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
-    if (deleted.avatar) {
-      const publicId = getPublicId(deleted.avatar);
-      await cloudinary.uploader.destroy(publicId);
-    }
-
-    res.json({ message: "Đã xoá bác sĩ" });
+    const result = await doctorService.deleteDoctor(req.params.id);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({ error: err.message });
   }
 };
 
+/**
+ * @swagger
+ * /api/doctors/specialty/{specialtyId}:
+ *   get:
+ *     summary: Get doctors by specialty
+ *     tags: [Doctors]
+ *     parameters:
+ *       - in: path
+ *         name: specialtyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Specialty ID
+ *     responses:
+ *       200:
+ *         description: List of doctors by specialty
+ *       404:
+ *         description: No doctors found for this specialty
+ *       500:
+ *         description: Server error
+ */
 export const getDoctorsBySpecialty = async (req, res) => {
   try {
-    const { specialtyId } = req.params;
-
-    // Tìm bác sĩ theo ID của chuyên khoa
-    const doctors = await Doctor.find({ 
-      specialties: specialtyId 
-    }).populate("specialties", "name slug");
-
-    if (doctors.length === 0) {
-      return res.status(404).json({
-        message: "Không tìm thấy bác sĩ nào thuộc chuyên khoa này",
-      });
-    }
-
-    res.json({
-      count: doctors.length,
-      doctors: doctors,
-    });
+    const result = await doctorService.getDoctorsBySpecialty(req.params.specialtyId);
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({ error: error.message });
   }
 };
 
-
+/**
+ * @swagger
+ * /api/doctors/random/five:
+ *   get:
+ *     summary: Get five random doctors
+ *     tags: [Doctors]
+ *     responses:
+ *       200:
+ *         description: List of random doctors
+ *       500:
+ *         description: Server error
+ */
 export const getFiveRandomDoctors = async (req, res) => {
   try {
-    // Lấy danh sách 5 ID bác sĩ ngẫu nhiên
-    const randomDoctors = await Doctor.aggregate([
-      { $sample: { size: 5 } },
-      { $project: { _id: 1 } },
-    ]);
-
-    const ids = randomDoctors.map((doc) => doc._id);
-
-    // Dùng find + populate để lấy đầy đủ thông tin
-    const doctors = await Doctor.find({ _id: { $in: ids } }).populate("specialties", "name slug");
-
+    const doctors = await doctorService.getRandomDoctors(5);
     res.json(doctors);
   } catch (err) {
     res.status(500).json({ error: err.message });

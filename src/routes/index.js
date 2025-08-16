@@ -10,7 +10,7 @@ import informationRouter from "./information.router.js";
 import healthConsultationRouter from "./health-consultation.router.js";
 import applicationRouter from "./application.router.js";
 import backgroundBannerRouter from "./background-banner.router.js";
-
+import healthInsuranceExamRouter from "./health-insurance-exam.router.js";
 
 function route(app){
     app.use('/api/users', userRouter)
@@ -25,6 +25,7 @@ function route(app){
     app.use('/api/health-consultations', healthConsultationRouter);
     app.use('/api/applications', applicationRouter);
     app.use('/api/background-banners', backgroundBannerRouter);
+    app.use('/api/health-insurance-exams', healthInsuranceExamRouter);
 }
 
 export default route;

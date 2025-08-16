@@ -1,6 +1,61 @@
-import News from '../../models/news.model.js';
-import { generateSlug } from '../../utils/slug.js';
-import { paginate } from '../../utils/pagination.js';
+import newsService from '../services/news.service.js';
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     News:
+ *       type: object
+ *       required:
+ *         - title
+ *         - description
+ *         - content
+ *         - category
+ *         - tags
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: News ID
+ *         title:
+ *           type: string
+ *           description: News title
+ *         slug:
+ *           type: string
+ *           description: URL-friendly version of title
+ *         description:
+ *           type: string
+ *           description: Short description
+ *         content:
+ *           type: string
+ *           description: Full content
+ *         image:
+ *           type: string
+ *           description: Image URL
+ *         category:
+ *           type: string
+ *           description: News category
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Article tags
+ *         publish_date:
+ *           type: string
+ *           format: date-time
+ *           description: Publication date
+ *         is_active:
+ *           type: boolean
+ *           description: Is article active
+ *         view_count:
+ *           type: integer
+ *           description: View count
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
 
 /**
  * @swagger
@@ -31,33 +86,20 @@ import { paginate } from '../../utils/pagination.js';
  *                 description: Short description
  *               content:
  *                 type: string
- *                 description: News content
+ *                 description: Full content
  *               category:
  *                 type: string
  *                 description: News category
  *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: News tags
+ *                 type: string
+ *                 description: Comma-separated tags
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Featured image
+ *                 description: News image
  *     responses:
  *       201:
  *         description: News created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/News'
  *       400:
  *         description: Bad request
  *       401:
@@ -67,63 +109,17 @@ import { paginate } from '../../utils/pagination.js';
  */
 const createNews = async (req, res) => {
   try {
-    const { title, description, content, category, tags } = req.body;
-    const imageUrl = req.file?.path || '';
-
-    // Validation - Kiểm tra tất cả field bắt buộc
-    if (!title || !description || !content || !category || !tags) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tất cả các trường đều bắt buộc: title, description, content, category, tags'
-      });
-    }
-
-    // Kiểm tra tags không được rỗng
-    const processedTags = Array.isArray(tags) ? tags : (tags ? tags.split(',').map(tag => tag.trim()) : []);
-    if (processedTags.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tags không được để trống'
-      });
-    }
-
-    // Tạo slug từ title
-    const slug = generateSlug(title);
-
-    // Kiểm tra slug đã tồn tại chưa
-    const existingNews = await News.findOne({ slug });
-    let finalSlug = slug;
-    if (existingNews) {
-      finalSlug = `${slug}-${Date.now()}`;
-    }
-
-    const newsData = {
-      title: title.trim(),
-      slug: finalSlug,
-      description: description.trim(),
-      content: content.trim(),
-      image: imageUrl,
-      category: category.trim(),
-      tags: processedTags,
-      publish_date: new Date(),
-      is_active: true,
-      view_count: 0
-    };
-
-    const news = await News.create(newsData);
-
+    const result = await newsService.createNews(req.body, { image: req.file ? [req.file] : null });
     res.status(201).json({
       success: true,
-      message: 'Tạo bài viết thành công',
-      data: news
+      message: 'Tạo tin tức thành công',
+      data: result
     });
-
   } catch (error) {
     console.error('Create news error:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message
     });
   }
 };
@@ -136,17 +132,20 @@ const createNews = async (req, res) => {
  *     tags: [News]
  *     parameters:
  *       - in: query
- *         name: page
+ *         name: category
  *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
+ *           type: string
+ *         description: Filter by category
  *       - in: query
- *         name: limit
+ *         name: author
  *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of articles per page
+ *           type: string
+ *         description: Filter by author
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
  *     responses:
  *       200:
  *         description: List of news articles
@@ -157,39 +156,19 @@ const createNews = async (req, res) => {
  *               properties:
  *                 success:
  *                   type: boolean
+ *                 count:
+ *                   type: integer
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/News'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     total:
- *                       type: integer
- *                     pages:
- *                       type: integer
+ *       500:
+ *         description: Server error
  */
 const getAllNews = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    // Build query - không có điều kiện gì, lấy tất cả tin tức
-    const query = {};
-
-    // Kế thừa pagination utility với options đơn giản
-    const result = await paginate(News, query, {
-      page,
-      limit: Math.min(limit, 100), // Giới hạn max 100
-      sort: { publish_date: -1 }    // Luôn sắp xếp theo mới nhất
-    });
-
+    const result = await newsService.getAllNews(req.query);
     res.json(result);
-
   } catch (error) {
     console.error('Get news error:', error);
     res.status(500).json({
@@ -212,7 +191,8 @@ const getAllNews = async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: News slug
+ *         description: News article slug
+ *         example: "tin-tuc-moi-nhat-ve-benh-vien"
  *     responses:
  *       200:
  *         description: News article details
@@ -226,36 +206,23 @@ const getAllNews = async (req, res) => {
  *                 data:
  *                   $ref: '#/components/schemas/News'
  *       404:
- *         description: News not found
+ *         description: News article not found
+ *       500:
+ *         description: Server error
  */
 const getNewsBySlug = async (req, res) => {
   try {
-    const news = await News.findOne({ slug: req.params.slug});
-    
-    if (!news) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy bài viết'
-      });
-    }
-
-    // Tăng view count
-    await News.findOneAndUpdate(
-      { slug: req.params.slug }, 
-      { $inc: { view_count: 1 } }
-    );
-
+    const news = await newsService.getNewsBySlug(req.params.slug);
     res.json({
       success: true,
       data: news
     });
-
   } catch (error) {
     console.error('Get news by slug error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message
     });
   }
 };
@@ -272,7 +239,7 @@ const getNewsBySlug = async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: News ID
+ *         description: News article ID
  *     responses:
  *       200:
  *         description: News article details
@@ -286,35 +253,23 @@ const getNewsBySlug = async (req, res) => {
  *                 data:
  *                   $ref: '#/components/schemas/News'
  *       404:
- *         description: News not found
+ *         description: News article not found
+ *       500:
+ *         description: Server error
  */
 const getNewsById = async (req, res) => {
   try {
-    const news = await News.findById(req.params.id);
-    
-    if (!news) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy bài viết'
-      });
-    }
-
-    // Tăng view count
-    await News.findByIdAndUpdate(req.params.id, { 
-      $inc: { view_count: 1 } 
-    });
-
+    const news = await newsService.getNewsById(req.params.id);
     res.json({
       success: true,
       data: news
     });
-
   } catch (error) {
     console.error('Get news by ID error:', error);
-    res.status(500).json({
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server',
-      error: error.message
+      message: error.message
     });
   }
 };
@@ -323,7 +278,7 @@ const getNewsById = async (req, res) => {
  * @swagger
  * /api/news/{id}:
  *   put:
- *     summary: Update news article (Admin only)
+ *     summary: Update news article by ID (Admin only)
  *     tags: [News]
  *     security:
  *       - bearerAuth: []
@@ -333,7 +288,7 @@ const getNewsById = async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: News ID
+ *         description: News article ID
  *     requestBody:
  *       required: true
  *       content:
@@ -349,27 +304,45 @@ const getNewsById = async (req, res) => {
  *                 description: Short description
  *               content:
  *                 type: string
- *                 description: News content
+ *                 description: Full content
  *               category:
  *                 type: string
  *                 description: News category
  *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: News tags
+ *                 type: string
+ *                 description: Comma-separated tags
+ *               author:
+ *                 type: string
+ *                 description: Author name
  *               is_active:
  *                 type: boolean
  *                 description: Is article active
+ *               publish_date:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Publication date
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: New featured image (optional)
+ *                 description: New news image (optional)
  *     responses:
  *       200:
- *         description: News updated successfully
+ *         description: News article updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/News'
  *       404:
- *         description: News not found
+ *         description: News article not found
+ *       400:
+ *         description: Bad request
  *       401:
  *         description: Unauthorized
  *       403:
@@ -377,98 +350,113 @@ const getNewsById = async (req, res) => {
  */
 const updateNews = async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    console.log('Update news request - ID:', id);
-    console.log('Request body:', req.body);
-    console.log('Request file:', req.file ? {
-      filename: req.file.filename,
-      path: req.file.path,
-      originalname: req.file.originalname
-    } : 'No file uploaded');
-
-    // Tìm bài viết hiện tại
-    const currentNews = await News.findById(id);
-    if (!currentNews) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy bài viết'
-      });
-    }
-
-    const updateData = { ...req.body };
-
-    // Xử lý tags nếu có
-    if (req.body.tags) {
-      const processedTags = Array.isArray(req.body.tags) 
-        ? req.body.tags 
-        : req.body.tags.split(',').map(tag => tag.trim());
-      updateData.tags = processedTags;
-    }
-
-    // Xử lý title và slug nếu có
-    if (updateData.title && updateData.title.trim() !== '') {
-      const newTitle = updateData.title.trim();
-      const newSlug = generateSlug(newTitle);
-      
-      // Kiểm tra slug trùng với bài viết khác (trừ bài viết hiện tại)
-      if (newSlug !== currentNews.slug) {
-        const existingNews = await News.findOne({ 
-          slug: newSlug, 
-          _id: { $ne: id } 
-        });
-        if (existingNews) {
-          updateData.slug = `${newSlug}-${Date.now()}`;
-        } else {
-          updateData.slug = newSlug;
-        }
-      }
-      updateData.title = newTitle;
-    }
-
-    // Xử lý ảnh mới nếu có
-    if (req.file) {
-      updateData.image = req.file.path;
-      console.log('New image path:', req.file.path);
-      
-      // TODO: Có thể xóa ảnh cũ nếu cần
-      // if (currentNews.image && currentNews.image !== req.file.path) {
-      //   try {
-      //     const oldImagePath = path.resolve(currentNews.image);
-      //     if (fs.existsSync(oldImagePath)) {
-      //       fs.unlinkSync(oldImagePath);
-      //     }
-      //   } catch (error) {
-      //     console.log('Error deleting old image:', error);
-      //   }
-      // }
-    }
-
-    updateData.updatedAt = new Date();
-
-    console.log('Final update data:', updateData);
-
-    const updatedNews = await News.findByIdAndUpdate(
-      id, 
-      updateData, 
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedNews) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy bài viết'
-      });
-    }
-
+    const result = await newsService.updateNews(req.params.id, req.body, { image: req.file ? [req.file] : null });
     res.json({
       success: true,
-      message: 'Cập nhật bài viết thành công',
-      data: updatedNews
+      message: 'Cập nhật tin tức thành công',
+      data: result
     });
-
   } catch (error) {
     console.error('Update news error:', error);
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/news/{id}:
+ *   delete:
+ *     summary: Delete news article by ID (Admin only)
+ *     tags: [News]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: News article ID
+ *     responses:
+ *       200:
+ *         description: News article deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: News article not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
+const deleteNews = async (req, res) => {
+  try {
+    const result = await newsService.deleteNews(req.params.id);
+    res.json({
+      success: true,
+      message: 'Xóa tin tức thành công'
+    });
+  } catch (error) {
+    console.error('Delete news error:', error);
+    const statusCode = error.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/news/latest:
+ *   get:
+ *     summary: Get latest news articles
+ *     tags: [News]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of latest articles to retrieve
+ *     responses:
+ *       200:
+ *         description: List of latest news articles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/News'
+ *       500:
+ *         description: Server error
+ */
+const getLatestNews = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const news = await newsService.getLatestNews(limit);
+    res.json({
+      success: true,
+      data: news
+    });
+  } catch (error) {
+    console.error('Get latest news error:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi server',
@@ -479,47 +467,44 @@ const updateNews = async (req, res) => {
 
 /**
  * @swagger
- * /api/news/{id}:
- *   delete:
- *     summary: Delete news article (Admin only)
+ * /api/news/featured:
+ *   get:
+ *     summary: Get featured news articles (most viewed)
  *     tags: [News]
- *     security:
- *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
+ *       - in: query
+ *         name: limit
  *         schema:
- *           type: string
- *         description: News ID
+ *           type: integer
+ *           default: 5
+ *         description: Number of featured articles to retrieve
  *     responses:
  *       200:
- *         description: News deleted successfully
- *       404:
- *         description: News not found
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin only
+ *         description: List of featured news articles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/News'
+ *       500:
+ *         description: Server error
  */
-const deleteNews = async (req, res) => {
+const getFeaturedNews = async (req, res) => {
   try {
-    const deletedNews = await News.findByIdAndDelete(req.params.id);
-    
-    if (!deletedNews) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy bài viết'
-      });
-    }
-
+    const limit = parseInt(req.query.limit) || 5;
+    const news = await newsService.getFeaturedNews(limit);
     res.json({
       success: true,
-      message: 'Xóa bài viết thành công'
+      data: news
     });
-
   } catch (error) {
-    console.error('Delete news error:', error);
+    console.error('Get featured news error:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi server',
@@ -528,4 +513,186 @@ const deleteNews = async (req, res) => {
   }
 };
 
-export { createNews, getAllNews, getNewsById, getNewsBySlug, updateNews, deleteNews };
+/**
+ * @swagger
+ * /api/news/category/{category}:
+ *   get:
+ *     summary: Get news articles by category
+ *     tags: [News]
+ *     parameters:
+ *       - in: path
+ *         name: category
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: News category
+ *         example: "sức khỏe"
+ *     responses:
+ *       200:
+ *         description: List of news articles by category
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/News'
+ *       500:
+ *         description: Server error
+ */
+const getNewsByCategory = async (req, res) => {
+  try {
+    const news = await newsService.getNewsByCategory(req.params.category);
+    res.json({
+      success: true,
+      data: news
+    });
+  } catch (error) {
+    console.error('Get news by category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/news/search:
+ *   get:
+ *     summary: Search news articles
+ *     tags: [News]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search term
+ *         example: "tim mạch"
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/News'
+ *       400:
+ *         description: Missing search term
+ *       500:
+ *         description: Server error
+ */
+const searchNews = async (req, res) => {
+  try {
+    const { q: searchTerm, ...filters } = req.query;
+    
+    if (!searchTerm) {
+      return res.status(400).json({
+        success: false,
+        message: 'Từ khóa tìm kiếm là bắt buộc'
+      });
+    }
+
+    const news = await newsService.searchNews(searchTerm, filters);
+    res.json({
+      success: true,
+      data: news
+    });
+  } catch (error) {
+    console.error('Search news error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/news/statistics:
+ *   get:
+ *     summary: Get news statistics
+ *     tags: [News]
+ *     responses:
+ *       200:
+ *         description: News statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalNews:
+ *                       type: integer
+ *                       description: Total number of news articles
+ *                     activeNews:
+ *                       type: integer
+ *                       description: Number of active news articles
+ *                     totalViews:
+ *                       type: integer
+ *                       description: Total view count across all articles
+ *                     categories:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: List of categories
+ *       500:
+ *         description: Server error
+ */
+const getNewsStatistics = async (req, res) => {
+  try {
+    const stats = await newsService.getNewsStatistics();
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get news statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
+export { 
+  createNews, 
+  getAllNews, 
+  getNewsById, 
+  getNewsBySlug, 
+  updateNews, 
+  deleteNews,
+  getLatestNews,
+  getFeaturedNews,
+  getNewsByCategory,
+  searchNews,
+  getNewsStatistics
+};

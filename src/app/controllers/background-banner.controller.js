@@ -5,8 +5,7 @@
  *   description: Background banner management API
  */
 
-import BackgroundBanner from "../../models/background-banner.model.js";
-import { cloudinary, getPublicId } from "../../config/cloudinary.js";
+import backgroundBannerService from '../services/background-banner.service.js';
 
 /**
  * @swagger
@@ -47,19 +46,7 @@ import { cloudinary, getPublicId } from "../../config/cloudinary.js";
  */
 export const createBackgroundBanner = async (req, res) => {
   try {
-    const imageFile = req.files?.image?.[0];
-    
-    if (!imageFile) {
-      return res.status(400).json({ error: "Vui lòng upload ảnh banner" });
-    }
-
-    const bannerData = {
-      ...req.body,
-      image: imageFile.path, // URL từ Cloudinary
-    };
-
-    const banner = new BackgroundBanner(bannerData);
-    await banner.save();
+    const banner = await backgroundBannerService.createBackgroundBanner(req.body, req.files);
     res.status(201).json(banner);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -90,7 +77,7 @@ export const createBackgroundBanner = async (req, res) => {
  */
 export const getAllBackgroundBanners = async (req, res) => {
   try {
-    const banners = await BackgroundBanner.find();
+    const banners = await backgroundBannerService.getAllBackgroundBanners();
     res.json(banners);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -132,13 +119,11 @@ export const getAllBackgroundBanners = async (req, res) => {
  */
 export const getBackgroundBannerById = async (req, res) => {
   try {
-    const banner = await BackgroundBanner.findById(req.params.id);
-    if (!banner) {
-      return res.status(404).json({ message: "Không tìm thấy banner" });
-    }
+    const banner = await backgroundBannerService.getBackgroundBannerById(req.params.id);
     res.json(banner);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({ error: err.message });
   }
 };
 
@@ -191,32 +176,15 @@ export const getBackgroundBannerById = async (req, res) => {
  */
 export const updateBackgroundBanner = async (req, res) => {
   try {
-    const banner = await BackgroundBanner.findById(req.params.id);
-    if (!banner) {
-      return res.status(404).json({ message: "Không tìm thấy banner" });
-    }
-
-    const imageFile = req.files?.image?.[0];
-    const updatedData = { ...req.body };
-
-    // Nếu có ảnh mới, xóa ảnh cũ và cập nhật ảnh mới
-    if (imageFile) {
-      if (banner.image) {
-        const publicId = getPublicId(banner.image);
-        await cloudinary.uploader.destroy(publicId);
-      }
-      updatedData.image = imageFile.path;
-    }
-
-    const updated = await BackgroundBanner.findByIdAndUpdate(
+    const updated = await backgroundBannerService.updateBackgroundBanner(
       req.params.id, 
-      updatedData, 
-      { new: true }
+      req.body, 
+      req.files
     );
-    
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 400;
+    res.status(statusCode).json({ error: err.message });
   }
 };
 
@@ -259,19 +227,10 @@ export const updateBackgroundBanner = async (req, res) => {
  */
 export const deleteBackgroundBanner = async (req, res) => {
   try {
-    const banner = await BackgroundBanner.findByIdAndDelete(req.params.id);
-    if (!banner) {
-      return res.status(404).json({ message: "Không tìm thấy banner" });
-    }
-
-    // Xóa ảnh trên Cloudinary
-    if (banner.image) {
-      const publicId = getPublicId(banner.image);
-      await cloudinary.uploader.destroy(publicId);
-    }
-
-    res.json({ message: "Đã xóa banner thành công" });
+    const result = await backgroundBannerService.deleteBackgroundBanner(req.params.id);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.message.includes('Không tìm thấy') ? 404 : 500;
+    res.status(statusCode).json({ error: err.message });
   }
 };
