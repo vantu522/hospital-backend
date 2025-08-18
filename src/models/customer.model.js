@@ -5,13 +5,11 @@ const customerSchema = new mongoose.Schema({
   // Personal Information
   full_name: {
     type: String,
-    required: true,
     trim: true,
     maxlength: 100
   },
   phone_number: {
     type: String,
-    required: true,
     trim: true,
     unique: true
   },
@@ -23,35 +21,29 @@ const customerSchema = new mongoose.Schema({
   },
   citizen_id: {
     type: String,
-    required: true,
     trim: true,
     unique: true
   },
   date_of_birth: {
-    type: Date,
-    required: true
+    type: Date
   },
   gender: {
     type: String,
-    required: true,
     enum: ['male', 'female', 'other']
   },
   address: {
     type: String,
-    required: true,
     trim: true,
     maxlength: 200
   },
   health_insurance_number: {
     type: String,
-    required: true,
     trim: true
   },
 
   // Account Information
   password: {
     type: String,
-    required: true,
     minlength: 6
   },
   role: {
