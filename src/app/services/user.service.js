@@ -46,7 +46,7 @@ class UserService {
   /**
    * Create new user
    */
-  async createUser(body, creatorRole) {
+  async createUser(body) {
     // Validate data
     const dataValidation = UserValidator.validateCreate(body);
     if (!dataValidation.isValid) {
@@ -55,15 +55,10 @@ class UserService {
 
     // Check email exists
     await this.checkEmailExists(body.email);
-    
+
     const targetRole = body.role || 'admin';
-    
-    // Check permissions
-    const permissionValidation = UserValidator.validateCreatePermissions(creatorRole, targetRole);
-    if (!permissionValidation.isValid) {
-      throw new Error(permissionValidation.errors.join(', '));
-    }
-    
+
+    // Không cần mã hóa mật khẩu ở service, model sẽ tự động hash
     const userData = {
       name: body.name.trim(),
       email: body.email.toLowerCase().trim(),
@@ -106,10 +101,15 @@ class UserService {
   async loginUser(email, password) {
     const user = await this.getUserByEmail(email);
     if (!user) {
-      throw new Error('Email hoặc mật khẩu không đúng');
+      throw new Error('Email không tồn tại');
     }
 
-    const isValidPassword = await user.comparePassword(password);
+    // Log password nhập vào và password đã mã hóa trong DB
+    console.log('Password nhập vào:', password);
+    console.log('Password đã mã hóa trong DB:', user.password);
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('Kết quả so sánh:', isValidPassword);
     if (!isValidPassword) {
       throw new Error('Email hoặc mật khẩu không đúng');
     }
