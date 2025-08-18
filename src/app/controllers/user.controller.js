@@ -77,9 +77,9 @@ export const getUsers = async (req, res) => {
  *                 description: User password
  *               role:
  *                 type: string
- *                 enum: [admin, doctor, user]
- *                 default: user
- *                 description: User role
+ *                 enum: [superadmin, admin, receptionist]
+ *                 default: admin
+ *                 description: User role (superadmin, admin, receptionist)
  *     responses:
  *       201:
  *         description: User created successfully
@@ -174,7 +174,8 @@ export const createUser = async (req, res) => {
  */
 export const login = async (req, res) => {
   try {
-    const result = await userService.login(req.body);
+    const { email, password } = req.body;
+    const result = await userService.loginUser(email, password);
     res.status(200).json({
       success: true,
       message: 'Đăng nhập thành công',
