@@ -1,9 +1,8 @@
-
 import customerService from '../services/customer.service.js';
 
 /**
  * @swagger
- * /api/customer/register:
+ * /api/customers/register:
  *   post:
  *     summary: Đăng ký tài khoản khách hàng
  *     tags:
@@ -15,33 +14,10 @@ import customerService from '../services/customer.service.js';
  *           schema:
  *             type: object
  *             required:
- *               - full_name
  *               - phone_number
- *               - citizen_id
- *               - date_of_birth
- *               - gender
- *               - address
- *               - health_insurance_number
  *               - password
  *             properties:
- *               full_name:
- *                 type: string
  *               phone_number:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               citizen_id:
- *                 type: string
- *               date_of_birth:
- *                 type: string
- *                 format: date
- *               gender:
- *                 type: string
- *                 enum: [male, female, other]
- *               address:
- *                 type: string
- *               health_insurance_number:
  *                 type: string
  *               password:
  *                 type: string
@@ -67,21 +43,25 @@ import customerService from '../services/customer.service.js';
  *               $ref: '#/components/schemas/Error'
  */
 const register = async (req, res) => {
+  console.log('---[API] /api/customers/register: Bắt đầu xử lý request');
   try {
+    console.log('Request body:', req.body);
     const result = await customerService.register(req.body);
+    console.log('Kết quả trả về từ service:', result);
     return res.status(201).json({
       success: true,
       message: 'Đăng ký thành công',
       data: result
     });
   } catch (error) {
+    console.error('Lỗi khi register customer:', error);
     return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 /**
  * @swagger
- * /api/customer/login:
+ * /api/customers/login:
  *   post:
  *     summary: Đăng nhập khách hàng
  *     tags:
@@ -93,12 +73,12 @@ const register = async (req, res) => {
  *           schema:
  *             type: object
  *             required:
- *               - identifier
+ *               - phone_number
  *               - password
  *             properties:
- *               identifier:
+ *               phone_number:
  *                 type: string
- *                 description: Email hoặc số điện thoại
+ *                 description: Số điện thoại
  *               password:
  *                 type: string
  *     responses:
@@ -124,8 +104,8 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
-    const result = await customerService.login(identifier, password);
+    const { phone_number, password } = req.body;
+    const result = await customerService.login(phone_number, password);
     return res.status(200).json({
       success: true,
       message: 'Đăng nhập thành công',

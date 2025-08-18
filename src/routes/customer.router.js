@@ -6,9 +6,9 @@ import { validate } from '../app/middlewares/validate.js';
 const customerRouter = express.Router();
 
 // Đăng ký customer
-customerRouter.post('/register', validateCustomerRegister, validate, customerController.register);
+router.post('/register', validateCustomerRegister, customerController.register);
 
 // Đăng nhập customer
-customerRouter.post('/login', validateCustomerLogin, validate, customerController.login);
+router.post('/login', validateCustomerLogin, customerController.login);
 
 export default customerRouter;

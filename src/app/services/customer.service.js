@@ -4,18 +4,17 @@ import jwt from 'jsonwebtoken';
 
 class CustomerService {
 	async register(data) {
+		console.log('[Service] Bắt đầu register customer:', data);
 		// Kiểm tra trùng lặp
-		if (await customerRepository.findByPhone(data.phone_number)) {
+		const existed = await customerRepository.findByPhone(data.phone_number);
+		console.log('[Service] Kết quả kiểm tra trùng lặp:', existed);
+		if (existed) {
+			console.error('[Service] Số điện thoại đã tồn tại');
 			throw new Error('Số điện thoại đã tồn tại');
 		}
-		if (data.email && await customerRepository.findByEmail(data.email)) {
-			throw new Error('Email đã tồn tại');
-		}
-		if (await customerRepository.findByCitizenId(data.citizen_id)) {
-			throw new Error('CMND/CCCD đã tồn tại');
-		}
-		// Tạo customer
-		const customer = await customerRepository.create({ ...data, role: 'user' });
+		// Chỉ nhận phone_number và password
+		const customer = await customerRepository.create({ phone_number: data.phone_number, password: data.password, role: 'user' });
+		console.log('[Service] Customer đã tạo:', customer);
 		return customer.toPublicJSON();
 	}
 
