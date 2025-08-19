@@ -10,19 +10,16 @@ const customerSchema = new mongoose.Schema({
   },
   phone_number: {
     type: String,
-    trim: true,
-    unique: true
+    trim: true
   },
   email: {
     type: String,
     trim: true,
-    lowercase: true,
-    sparse: true // Allow null/undefined values but unique if present
+    lowercase: true
   },
   citizen_id: {
     type: String,
-    trim: true,
-    unique: true
+    trim: true
   },
   date_of_birth: {
     type: Date
@@ -56,9 +53,8 @@ const customerSchema = new mongoose.Schema({
 });
 
 // Indexes
-customerSchema.index({ phone_number: 1 });
-customerSchema.index({ email: 1 }, { sparse: true });
-customerSchema.index({ citizen_id: 1 });
+customerSchema.index({ phone_number: 1 }, { unique: true });
+customerSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 // Hash password before save
 customerSchema.pre('save', async function(next) {

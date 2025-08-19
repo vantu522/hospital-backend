@@ -12,7 +12,7 @@ const doctorSchema = new mongoose.Schema({
   certifications: [{type: String}],
   expertise_fields: [{ type: String }],
   training_process: [{ type: String }],
-  slug: { type: String, unique: true },
+  slug: { type: String },
   avatar: String,
   phone_number: String,
   email: String,

@@ -10,7 +10,6 @@ const healthConsultationSchema = new mongoose.Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     trim: true,
     lowercase: true
   },
@@ -40,11 +39,6 @@ const healthConsultationSchema = new mongoose.Schema({
 });
 
 // Create indexes
-healthConsultationSchema.index({ specialty_id: 1 });
-healthConsultationSchema.index({ is_active: 1 });
-healthConsultationSchema.index({ createdAt: -1 });
-healthConsultationSchema.index({ slug: 1 }, { unique: true });
-healthConsultationSchema.index({ title: 'text' }); // Text search index
 
 // NOTE: Khi sử dụng, chỉ populate field 'name' để tránh tràn data:
 // .populate('specialty_id', 'name')
