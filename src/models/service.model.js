@@ -4,7 +4,7 @@ const serviceSchema = new mongoose.Schema({
   name: { type: String, required: true },
   specialties: { type: mongoose.Schema.Types.ObjectId, ref: 'Specialty' },
   description: { type: String, required: false },
-  slug: { type: String, required: true, unique: true },
+  slug: { type: String, required: true },
   avatar: { type: String, required: false },
   images: [{ type: String }],
   features: [{ type: String }],
