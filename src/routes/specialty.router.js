@@ -9,6 +9,7 @@ import {
 } from '../app/controllers/specialty.controller.js';
 // import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js'; // TODO: Uncomment for production
 import upload from '../app/middlewares/upload.js';
+import { requireAdminOrSuperadmin } from '../app/middlewares/auth.js';
 
 const specialtyRouter = Router();
 
@@ -18,14 +19,14 @@ specialtyRouter.get('/slug/:slug', getSpecialtyBySlug);
 specialtyRouter.get('/:id/doctors', getSpecialtyWithDoctors);
 
 // Admin only routes
-specialtyRouter.post('/', upload.fields([
+specialtyRouter.post('/', requireAdminOrSuperadmin, upload.fields([
   { name: 'images', maxCount: 3 }
 ]), createSpecialty);
 
-specialtyRouter.put('/:id', upload.fields([
+specialtyRouter.put('/:id', requireAdminOrSuperadmin, upload.fields([
   { name: 'images', maxCount: 3 }
 ]), updateSpecialty);
 
-specialtyRouter.delete('/:id', deleteSpecialty);
+specialtyRouter.delete('/:id', requireAdminOrSuperadmin, deleteSpecialty);
 
 export default specialtyRouter;

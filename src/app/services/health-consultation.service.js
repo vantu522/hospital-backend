@@ -41,13 +41,13 @@ class HealthConsultationService {
   /**
    * Prepare health consultation data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     return {
       title: body.title.trim(),
       slug: generateSlug(body.title),
       description: body.description.trim(),
       specialty_id: body.specialty_id,
-      image: cloudinaryService.uploadFile(files.image[0]),
+      image: files?.image?.[0] ? await cloudinaryService.uploadFile(files.image[0]) : '',
       is_active: body.is_active !== undefined ? body.is_active : true
     };
   }
@@ -58,10 +58,8 @@ class HealthConsultationService {
   async createHealthConsultation(body, files) {
     try {
       this.validateCreateData(body, files);
-      
-      const consultationData = this.prepareCreateData(body, files);
+      const consultationData = await this.prepareCreateData(body, files);
       const consultation = await healthConsultationRepository.create(consultationData);
-      
       return consultation;
     } catch (error) {
       // Delete uploaded image if consultation creation fails
@@ -181,7 +179,7 @@ class HealthConsultationService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files) {
+  async prepareUpdateData(body, files) {
     const updateData = {};
 
     // Update basic fields
@@ -204,7 +202,7 @@ class HealthConsultationService {
 
     // Handle image
     if (files?.image?.[0]) {
-      updateData.image = cloudinaryService.uploadFile(files.image[0]);
+      updateData.image = await cloudinaryService.uploadFile(files.image[0]);
     }
 
     return updateData;
@@ -216,25 +214,19 @@ class HealthConsultationService {
   async updateHealthConsultation(id, body, files) {
     try {
       const currentConsultation = await this.getHealthConsultationById(id);
-      
       // Validate if title or description is being updated
       if (body.title && body.title.length > 200) {
         throw new Error('Tiêu đề không được vượt quá 200 ký tự');
       }
-
       if (body.description && body.description.length > 1000) {
         throw new Error('Mô tả không được vượt quá 1000 ký tự');
       }
-      
-      const updateData = this.prepareUpdateData(body, files);
-      
+      const updateData = await this.prepareUpdateData(body, files);
       // Delete old image if new one is uploaded
       if (files?.image?.[0] && currentConsultation.image) {
         await cloudinaryService.deleteImage(currentConsultation.image);
       }
-
       const consultation = await healthConsultationRepository.updateById(id, updateData);
-      
       return consultation;
     } catch (error) {
       // Delete uploaded image if update fails

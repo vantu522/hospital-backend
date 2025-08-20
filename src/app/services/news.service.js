@@ -21,7 +21,7 @@ class NewsService {
   /**
    * Prepare news data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     const { title, description, content, category, tags, author } = body;
 
     return {
@@ -32,7 +32,7 @@ class NewsService {
       category: category || '',
       tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(t => t.trim()) : []),
       author: author || '',
-      image: cloudinaryService.uploadFile(files?.image?.[0]) || '',
+      image: files?.image?.[0] ? await cloudinaryService.uploadFile(files.image[0]) : '',
       publish_date: new Date(),
       is_active: true,
       view_count: 0
@@ -44,8 +44,7 @@ class NewsService {
    */
   async createNews(body, files) {
     this.validateCreateData(body);
-    
-    const newsData = this.prepareCreateData(body, files);
+    const newsData = await this.prepareCreateData(body, files);
     return await newsRepository.create(newsData);
   }
 
@@ -148,7 +147,7 @@ class NewsService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files, currentNews) {
+  async prepareUpdateData(body, files, currentNews) {
     const updateData = {};
 
     // Update basic fields
@@ -183,7 +182,7 @@ class NewsService {
 
     // Handle image
     if (files?.image?.[0]) {
-      updateData.image = cloudinaryService.uploadFile(files.image[0]);
+      updateData.image = await cloudinaryService.uploadFile(files.image[0]);
     }
 
     return updateData;
@@ -194,14 +193,11 @@ class NewsService {
    */
   async updateNews(id, body, files) {
     const currentNews = await this.getNewsById(id);
-    
-    const updateData = this.prepareUpdateData(body, files, currentNews);
-    
+    const updateData = await this.prepareUpdateData(body, files, currentNews);
     // Delete old image if new one is uploaded
     if (files?.image?.[0] && currentNews.image) {
       await cloudinaryService.deleteImage(currentNews.image);
     }
-
     return await newsRepository.updateById(id, updateData);
   }
 

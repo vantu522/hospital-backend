@@ -25,7 +25,7 @@ class DoctorService {
   /**
    * Prepare doctor data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     const {
       full_name, specialties, hospital, department, degree, description,
       experience, certifications, expertise_fields, training_process,
@@ -44,7 +44,7 @@ class DoctorService {
       expertise_fields: Array.isArray(expertise_fields) ? expertise_fields : (expertise_fields ? expertise_fields.split(',').map(e => e.trim()) : []),
       training_process: Array.isArray(training_process) ? training_process : (training_process ? training_process.split(',').map(t => t.trim()) : []),
       slug: generateSlug(full_name),
-      avatar: cloudinaryService.uploadFile(files?.avatar?.[0]) || '',
+      avatar: files?.avatar?.[0] ? await cloudinaryService.uploadFile(files.avatar[0]) : '',
       phone_number: phone_number || '',
       email: email || '',
       work_address: work_address || '',
@@ -57,8 +57,7 @@ class DoctorService {
    */
   async createDoctor(body, files) {
     this.validateCreateData(body);
-    
-    const doctorData = this.prepareCreateData(body, files);
+    const doctorData = await this.prepareCreateData(body, files);
     return await doctorRepository.create(doctorData);
   }
 
@@ -136,7 +135,7 @@ class DoctorService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files, currentDoctor) {
+  async prepareUpdateData(body, files, currentDoctor) {
     const updateData = {};
 
     // Update basic fields
@@ -168,7 +167,7 @@ class DoctorService {
 
     // Handle avatar
     if (files?.avatar?.[0]) {
-      updateData.avatar = cloudinaryService.uploadFile(files.avatar[0]);
+      updateData.avatar = await cloudinaryService.uploadFile(files.avatar[0]);
     }
 
     return updateData;
@@ -179,14 +178,11 @@ class DoctorService {
    */
   async updateDoctor(id, body, files) {
     const currentDoctor = await this.getDoctorById(id);
-    
-    const updateData = this.prepareUpdateData(body, files, currentDoctor);
-    
+    const updateData = await this.prepareUpdateData(body, files, currentDoctor);
     // Delete old avatar if new one is uploaded
     if (files?.avatar?.[0] && currentDoctor.avatar) {
       await cloudinaryService.deleteImage(currentDoctor.avatar);
     }
-
     return await doctorRepository.updateById(id, updateData);
   }
 

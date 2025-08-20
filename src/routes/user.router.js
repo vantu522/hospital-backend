@@ -7,7 +7,7 @@ import { requireSuperAdmin, requireAdminOrSuperadmin } from '../app/middlewares/
 
 const userRouter = Router();
 
-userRouter.get('/', userController.getUsers);
+userRouter.get('/', requireAdminOrSuperadmin, userController.getUsers);
 userRouter.post('/', (req, res, next) => {
   const { role } = req.body;
   if (role === 'admin') {
