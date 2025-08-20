@@ -24,11 +24,11 @@ class BackgroundBannerService {
   /**
    * Prepare banner data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     const { description } = body;
 
     return {
-      image: cloudinaryService.uploadFile(files.image[0]),
+      image: files?.image?.[0] ? await cloudinaryService.uploadFile(files.image[0]) : '',
       description: description.trim()
     };
   }
@@ -38,8 +38,7 @@ class BackgroundBannerService {
    */
   async createBackgroundBanner(body, files) {
     this.validateCreateData(body, files);
-    
-    const bannerData = this.prepareCreateData(body, files);
+    const bannerData = await this.prepareCreateData(body, files);
     return await backgroundBannerRepository.create(bannerData);
   }
 
@@ -74,7 +73,7 @@ class BackgroundBannerService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files) {
+  async prepareUpdateData(body, files) {
     const updateData = {};
 
     if (body.description !== undefined) {
@@ -82,7 +81,7 @@ class BackgroundBannerService {
     }
 
     if (files?.image?.[0]) {
-      updateData.image = cloudinaryService.uploadFile(files.image[0]);
+      updateData.image = await cloudinaryService.uploadFile(files.image[0]);
     }
 
     return updateData;
@@ -93,14 +92,11 @@ class BackgroundBannerService {
    */
   async updateBackgroundBanner(id, body, files) {
     const currentBanner = await this.getBackgroundBannerById(id);
-    
-    const updateData = this.prepareUpdateData(body, files);
-    
+    const updateData = await this.prepareUpdateData(body, files);
     // Delete old image if new one is uploaded
     if (files?.image?.[0] && currentBanner.image) {
       await cloudinaryService.deleteImage(currentBanner.image);
     }
-
     return await backgroundBannerRepository.updateById(id, updateData);
   }
 

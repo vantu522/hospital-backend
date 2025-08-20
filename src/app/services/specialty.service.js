@@ -21,7 +21,7 @@ class SpecialtyService {
   /**
    * Prepare specialty data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     const { name, description, functions } = body;
 
     return {
@@ -31,7 +31,7 @@ class SpecialtyService {
         ? functions 
         : (functions ? functions.split(',').map(f => f.trim()) : []),
       slug: generateSlug(name),
-      images: cloudinaryService.uploadFiles(files?.images),
+      images: files?.images ? await cloudinaryService.uploadFiles(files.images) : [],
       is_active: true
     };
   }
@@ -41,8 +41,7 @@ class SpecialtyService {
    */
   async createSpecialty(body, files) {
     this.validateCreateData(body);
-    
-    const specialtyData = this.prepareCreateData(body, files);
+    const specialtyData = await this.prepareCreateData(body, files);
     return await specialtyRepository.create(specialtyData);
   }
 
@@ -100,7 +99,7 @@ class SpecialtyService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files, currentSpecialty) {
+  async prepareUpdateData(body, files, currentSpecialty) {
     const updateData = {};
 
     if (body.name !== undefined) {
@@ -124,7 +123,7 @@ class SpecialtyService {
 
     // Handle image updates
     if (files?.images && files.images.length > 0) {
-      updateData.images = cloudinaryService.uploadFiles(files.images);
+      updateData.images = await cloudinaryService.uploadFiles(files.images);
     }
 
     return updateData;
@@ -135,14 +134,11 @@ class SpecialtyService {
    */
   async updateSpecialty(id, body, files) {
     const currentSpecialty = await this.getSpecialtyById(id);
-    
-    const updateData = this.prepareUpdateData(body, files, currentSpecialty);
-    
+    const updateData = await this.prepareUpdateData(body, files, currentSpecialty);
     // Nếu có ảnh mới, xóa ảnh cũ
     if (files?.images && files.images.length > 0) {
       await cloudinaryService.deleteImages(currentSpecialty.images);
     }
-
     return await specialtyRepository.updateById(id, updateData);
   }
 
