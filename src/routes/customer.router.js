@@ -1,7 +1,7 @@
 import express from 'express';
 import customerController from '../app/controllers/customer.controller.js';
 import { validateCustomerRegister, validateCustomerLogin } from '../app/middlewares/customer.validator.js';
-import { validate } from '../app/middlewares/validate.js';
+import { requireAdminOrSuperadmin } from '../app/middlewares/auth.js';
 
 const customerRouter = express.Router();
 
@@ -11,4 +11,7 @@ customerRouter.post('/register', validateCustomerRegister, customerController.re
 // Đăng nhập customer
 customerRouter.post('/login', validateCustomerLogin, customerController.login);
 
-export default customerRouter;
+// Tạo tài khoản lễ tân (receptionist)
+router.post('/receptionist', requireAdminOrSuperadmin, customerController.createReceptionist);
+
+export default router;

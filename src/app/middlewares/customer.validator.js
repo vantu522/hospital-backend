@@ -41,3 +41,19 @@ export function validateCustomerLogin(req, res, next) {
   }
   next();
 }
+
+
+export function validateCustomerUpdate(req, res, next) {
+  const updateSchema = Joi.object({
+    full_name: Joi.string().max(100).allow(null, ''),
+    email: Joi.string().email().allow(null, ''),
+    date_of_birth: Joi.date().allow(null),
+    gender: Joi.string().valid('male', 'female', 'other').allow(null),
+    address: Joi.string().max(200).allow(null, '')
+  });
+  const { error } = updateSchema.validate(req.body, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ success: false, message: error.details.map(e => e.message).join(', ') });
+  }
+  next();
+}

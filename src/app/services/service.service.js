@@ -25,7 +25,7 @@ class ServiceService {
   /**
    * Prepare service data for creation
    */
-  prepareCreateData(body, files) {
+  async prepareCreateData(body, files) {
     const { name, specialties, description, features } = body;
 
     return {
@@ -34,8 +34,8 @@ class ServiceService {
       description: description || '',
       features: Array.isArray(features) ? features : (features ? features.split(',').map(f => f.trim()) : []),
       slug: generateSlug(name),
-      avatar: cloudinaryService.uploadFile(files?.avatar?.[0]) || '',
-      images: cloudinaryService.uploadFiles(files?.images) || [],
+      avatar: files?.avatar?.[0] ? await cloudinaryService.uploadFile(files.avatar[0]) : '',
+      images: files?.images ? await cloudinaryService.uploadFiles(files.images) : [],
       is_active: true
     };
   }
@@ -45,8 +45,7 @@ class ServiceService {
    */
   async createService(body, files) {
     this.validateCreateData(body);
-    
-    const serviceData = this.prepareCreateData(body, files);
+    const serviceData = await this.prepareCreateData(body, files);
     return await serviceRepository.create(serviceData);
   }
 
@@ -124,7 +123,7 @@ class ServiceService {
   /**
    * Prepare update data
    */
-  prepareUpdateData(body, files, currentService) {
+  async prepareUpdateData(body, files, currentService) {
     const updateData = {};
 
     // Update basic fields
@@ -149,12 +148,11 @@ class ServiceService {
 
     // Handle avatar
     if (files?.avatar?.[0]) {
-      updateData.avatar = cloudinaryService.uploadFile(files.avatar[0]);
+      updateData.avatar = await cloudinaryService.uploadFile(files.avatar[0]);
     }
-
     // Handle images
     if (files?.images && files.images.length > 0) {
-      updateData.images = cloudinaryService.uploadFiles(files.images);
+      updateData.images = await cloudinaryService.uploadFiles(files.images);
     }
 
     return updateData;
@@ -165,18 +163,14 @@ class ServiceService {
    */
   async updateService(id, body, files) {
     const currentService = await this.getServiceById(id);
-    
-    const updateData = this.prepareUpdateData(body, files, currentService);
-    
+    const updateData = await this.prepareUpdateData(body, files, currentService);
     // Delete old files if new ones are uploaded
     if (files?.avatar?.[0] && currentService.avatar) {
       await cloudinaryService.deleteImage(currentService.avatar);
     }
-
     if (files?.images && files.images.length > 0 && currentService.images) {
       await cloudinaryService.deleteImages(currentService.images);
     }
-
     return await serviceRepository.updateById(id, updateData);
   }
 

@@ -1,3 +1,7 @@
+// Hàm generateToken dùng chung cho user và customer
+export function generateToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION_IN || '7d' });
+}
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../../config/constants.js';
 
@@ -11,6 +15,8 @@ export const requireRole = (allowedRoles) => {
         return res.status(401).json({ success: false, message: 'Access token không được cung cấp' });
       }
       const decoded = jwt.verify(token, JWT_SECRET);
+      req.userId = decoded.userId;
+      req.role = decoded.role;
       if (!allowedRoles.includes(decoded.role)) {
         return res.status(403).json({ success: false, message: 'Không có quyền truy cập' });
       }
@@ -24,3 +30,4 @@ export const requireRole = (allowedRoles) => {
 // Middleware chỉ admin
 export const requireSuperAdmin = requireRole(['superadmin']);
 export const requireAdminOrSuperadmin = requireRole(['admin', 'superadmin']);
+export const requiredFullRole = requireRole(['admin', 'superadmin', 'user', 'receptionist']);

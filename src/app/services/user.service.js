@@ -1,6 +1,6 @@
 import userRepository from '../repositories/user.repository.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '../middlewares/auth.js';
 import UserValidator from '../middlewares/user.validator.js';
 
 class UserService {
@@ -114,12 +114,8 @@ class UserService {
       throw new Error('Email hoặc mật khẩu không đúng');
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'default_secret',
-      { expiresIn: '7d' }
-    );
+  // Generate JWT token
+  const token = generateToken({ userId: user._id, email: user.email, role: user.role });
 
     return {
       token,

@@ -1,8 +1,34 @@
+
 import customerRepository from '../repositories/customer.repository.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '../middlewares/auth.js';
 
 class CustomerService {
+	async update(customerId, data) {
+		// Không cho phép sửa phone_number, citizen_id, health_insurance_number
+		const { phone_number, citizen_id, health_insurance_number, ...updateData } = data;
+		const updated = await customerRepository.updateById(customerId, updateData);
+		if (!updated) throw new Error('Không tìm thấy khách hàng');
+		return updated.toPublicJSON();
+	}
+
+	async createReceptionist(data) {
+		// Kiểm tra trùng lặp
+		const existed = await customerRepository.findByPhone(data.phone_number);
+		if (existed) {
+			throw new Error('Số điện thoại đã tồn tại');
+		}
+		// Nhận các trường cần thiết
+		const customer = await customerRepository.create({
+			phone_number: data.phone_number,
+			password: data.password,
+			full_name: data.full_name,
+			email: data.email,
+			role: 'receptionist'
+		});
+		return customer.toPublicJSON();
+	}
+	
 	async register(data) {
 		console.log('[Service] Bắt đầu register customer:', data);
 		// Kiểm tra trùng lặp
@@ -34,11 +60,7 @@ class CustomerService {
 			throw new Error('Thông tin đăng nhập không đúng');
 		}
 		// Tạo JWT
-		const token = jwt.sign(
-			{ userId: customer._id, email: customer.email, role: customer.role },
-			process.env.JWT_SECRET,
-			{ expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-		);
+		const token = generateToken({ userId: customer._id, email: customer.email, role: customer.role });
 		return {
             token,
 			customer: customer.toAuthJSON(),

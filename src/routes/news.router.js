@@ -14,6 +14,7 @@ import {
 } from '../app/controllers/news.controller.js';
 // import { authenticateToken, requireAdmin } from '../app/middlewares/auth.js'; // TODO: Uncomment for production
 import upload from '../app/middlewares/upload.js';
+import { requireAdminOrSuperadmin } from '../app/middlewares/auth.js';
 
 const router = express.Router();
 
@@ -32,8 +33,8 @@ router.get('/:id', getNewsById);
 // router.put('/:id', authenticateToken, requireAdmin, updateNews);
 // router.delete('/:id', authenticateToken, requireAdmin, deleteNews);
 
-router.post('/', upload.single('image'), createNews);
-router.put('/:id',upload.single('image'), updateNews);
-router.delete('/:id', deleteNews);
+router.post('/', requireAdminOrSuperadmin, upload.single('image'), createNews);
+router.put('/:id', requireAdminOrSuperadmin, upload.single('image'), updateNews);
+router.delete('/:id', requireAdminOrSuperadmin, deleteNews);
 
 export default router;

@@ -59,7 +59,7 @@ import informationService from '../services/information.service.js';
 
 /**
  * @swagger
- * /api/information:
+ * /api/informations:
  *   post:
  *     summary: Create or update hospital information (Admin only)
  *     tags: [Information]
@@ -129,7 +129,7 @@ export const createInformation = async (req, res) => {
 
 /**
  * @swagger
- * /api/information:
+ * /api/informations:
  *   get:
  *     summary: Get all hospital information
  *     tags: [Information]
@@ -171,7 +171,7 @@ export const getMainInformation = async (req, res) => {
 
 /**
  * @swagger
- * /api/information/{id}:
+ * /api/informations/{id}:
  *   put:
  *     summary: Update hospital information by ID (Admin only)
  *     tags: [Information]
@@ -238,7 +238,7 @@ export const updateInformation = async (req, res) => {
 
 /**
  * @swagger
- * /api/information/{id}:
+ * /api/informations/{id}:
  *   delete:
  *     summary: Delete hospital information by ID (Admin only)
  *     tags: [Information]

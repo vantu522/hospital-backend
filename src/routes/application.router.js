@@ -2,6 +2,7 @@ import express from 'express';
 import applicationController from '../app/controllers/application.controller.js';
 import { uploadPDF } from '../utils/uploadPDF.js';
 // import { authenticateToken, requireAdmin } from '../app/middlewares/validate.js'; // TODO: Uncomment for production
+import { requireAdminOrSuperadmin } from '../app/middlewares/auth.js';
 
 const router = express.Router();
 
@@ -9,11 +10,11 @@ const router = express.Router();
 router.post('/', uploadPDF.single('cvFileUrl'), applicationController.createApplication);
 
 
-router.get('/', applicationController.getAllApplications);
-router.get('/:id/download-cv', applicationController.downloadCV);
-router.get('/:id', applicationController.getApplicationById);
-router.patch('/:id/status', applicationController.updateApplicationStatus);
-router.put('/:id', uploadPDF.single('cvFileUrl'), applicationController.updateApplication);
-router.delete('/:id', applicationController.deleteApplication);
+router.get('/', requireAdminOrSuperadmin, applicationController.getAllApplications);
+router.get('/:id/download-cv', requireAdminOrSuperadmin, applicationController.downloadCV);
+router.get('/:id', requireAdminOrSuperadmin, applicationController.getApplicationById);
+router.patch('/:id/status', requireAdminOrSuperadmin, applicationController.updateApplicationStatus);
+router.put('/:id', requireAdminOrSuperadmin, uploadPDF.single('cvFileUrl'), applicationController.updateApplication);
+router.delete('/:id', requireAdminOrSuperadmin, applicationController.deleteApplication);
 
 export default router;
