@@ -1,3 +1,4 @@
+
 import customerRepository from '../repositories/customer.repository.js';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../middlewares/auth.js';
@@ -10,6 +11,24 @@ class CustomerService {
 		if (!updated) throw new Error('Không tìm thấy khách hàng');
 		return updated.toPublicJSON();
 	}
+
+	async createReceptionist(data) {
+		// Kiểm tra trùng lặp
+		const existed = await customerRepository.findByPhone(data.phone_number);
+		if (existed) {
+			throw new Error('Số điện thoại đã tồn tại');
+		}
+		// Nhận các trường cần thiết
+		const customer = await customerRepository.create({
+			phone_number: data.phone_number,
+			password: data.password,
+			full_name: data.full_name,
+			email: data.email,
+			role: 'receptionist'
+		});
+		return customer.toPublicJSON();
+	}
+	
 	async register(data) {
 		console.log('[Service] Bắt đầu register customer:', data);
 		// Kiểm tra trùng lặp

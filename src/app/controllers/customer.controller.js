@@ -177,8 +177,69 @@ const update = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/customers/receptionist:
+ *   post:
+ *     summary: Tạo tài khoản lễ tân (receptionist)
+ *     tags:
+ *       - Customer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone_number
+ *               - password
+ *               - full_name
+ *             properties:
+ *               phone_number:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               full_name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Tạo lễ tân thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Tạo lễ tân thất bại
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+const createReceptionist = async (req, res) => {
+  try {
+    const result = await customerService.createReceptionist(req.body);
+    return res.status(201).json({
+      success: true,
+      message: 'Tạo lễ tân thành công',
+      data: result
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export default {
   register,
   login,
-  update
+  update,
+  createReceptionist
 };
