@@ -86,6 +86,7 @@ const createExam = async (req, res) => {
       encoded_id: result.encoded_id
     });
   } catch (error) {
+    // Trả về lỗi do service xác định
     return res.status(400).json({ success: false, message: error.message });
   }
 };

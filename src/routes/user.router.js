@@ -1,8 +1,5 @@
 import { Router } from 'express';
 import * as userController from '../app/controllers/user.controller.js'
-import * as contactController from '../app/controllers/contact.controller.js';
-import { validate } from '../app/middlewares/validate.js';
-import { createContact } from '../app/request/contact.request.js';
 import { requireSuperAdmin, requireAdminOrSuperadmin } from '../app/middlewares/auth.js';
 
 const userRouter = Router();
