@@ -10,10 +10,21 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   health_insurance_number: { type: String, required: true, trim: true },
   specialty: { type: mongoose.Schema.Types.ObjectId, ref: 'Specialty', required: true },
+  exam_type: {
+    type: String,
+    enum: ['BHYT', 'DV'],
+    required: true,
+  },
+  slotId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ScheduleSlot',
+      required: true,
+  },
+  
   exam_date: { type: Date, required: true },
   exam_time: { type: String, required: true },
   symptoms: { type: String, trim: true },
-  status: { type: String, enum: ['pending', 'accept', 'reject'], default: 'pending' }
+  status: { type: String, enum: ['pending', 'accept', 'reject'], default: 'pending' },
 }, { timestamps: true });
 
 export default mongoose.model('HealthInsuranceExam', HealthInsuranceExamSchema);
