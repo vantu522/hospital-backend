@@ -4,8 +4,39 @@ import QRCode from 'qrcode';
 
 class HealthInsuranceExamService {
   async createExam(data) {
+    // 1. Kiểm tra slot chung theo ngày + khung giờ + chuyên khoa
+    const { exam_date, exam_time, specialty, role } = data;
+    const ScheduleSlot = (await import('../models/schedule-slot.model.js')).default;
+    let slot = await ScheduleSlot.findOne({ date: exam_date, timeSlot: exam_time, specialty });
+    // 2. Nếu chưa có slot, sinh slot từ TimeSlotTemplate
+    if (!slot) {
+      const TimeSlotTemplate = (await import('../models/time-slot-template.model.js')).default;
+      const template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
+      if (!template) {
+        throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+      }
+      slot = await ScheduleSlot.create({
+        date: exam_date,
+        timeSlot: exam_time,
+        specialty,
+        capacity: template.capacity,
+        currentCount: 1,
+        is_active: true
+      });
+    } else {
+      // 3. Kiểm tra slot capacity
+      if (slot.currentCount >= slot.capacity) {
+        throw new Error('Slot đã đầy, vui lòng chọn khung giờ khác');
+      }
+      slot.currentCount += 1;
+      await slot.save();
+    }
+    // 4. Xác định status theo role
+    data.status = role === 'receptionist' ? 'accept' : 'pending';
+    // 5. Tạo lịch khám, lưu slotId và loại hình khám
+    data.slotId = slot._id;
     const exam = await healthInsuranceExamRepository.create(data);
-    // Tạo mã QR code base64 chứa id
+    // 6. Tạo mã QR code base64 chứa id
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
     const qrImageBase64 = await QRCode.toDataURL(encodedId);
     return {

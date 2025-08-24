@@ -1,3 +1,19 @@
+// Middleware gán role vào req, không bắt buộc phải có token
+export const attachRole = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.role = decoded.role;
+    } else {
+      req.role = 'user';
+    }
+  } catch (error) {
+    req.role = 'user';
+  }
+  next();
+};
 // Hàm generateToken dùng chung cho user và customer
 export function generateToken(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION_IN || '7d' });
