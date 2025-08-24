@@ -12,6 +12,6 @@ customerRouter.post('/register', validateCustomerRegister, customerController.re
 customerRouter.post('/login', validateCustomerLogin, customerController.login);
 
 // Tạo tài khoản lễ tân (receptionist)
-router.post('/receptionist', requireAdminOrSuperadmin, customerController.createReceptionist);
+customerRouter.post('/receptionist', requireAdminOrSuperadmin, customerController.createReceptionist);
 
-export default router;
+export default customerRouter;
