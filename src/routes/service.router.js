@@ -20,13 +20,13 @@ serviceRouter.get("/specialty/:specialtyId", serviceController.getServicesBySpec
 serviceRouter.get("/slug/:slug", serviceController.getServiceBySlug);
 serviceRouter.put(
   "/:id",
-  requireSuperAdmin,
+  requireAdminOrSuperadmin,
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "images", maxCount: 5 },
   ]),
   serviceController.updateService
 );
-serviceRouter.delete("/:id", requireSuperAdmin, serviceController.deleteService);
+serviceRouter.delete("/:id", requireAdminOrSuperadmin, serviceController.deleteService);
 
 export default serviceRouter;
