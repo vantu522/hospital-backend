@@ -2,6 +2,78 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
 
 /**
  * @swagger
+ * /api/health-insurance-exams/check-bhyt:
+ *   post:
+ *     summary: Kiểm tra thông tin thẻ BHYT qua API quốc gia
+ *     tags:
+ *       - HealthInsuranceExam
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - maThe
+ *               - hoTen
+ *               - ngaySinh
+ *             properties:
+ *               maThe:
+ *                 type: string
+ *                 description: Mã thẻ BHYT
+ *               hoTen:
+ *                 type: string
+ *                 description: Họ tên người khám
+ *               ngaySinh:
+ *                 type: string
+ *                 description: "Ngày sinh (ddmmyyyy, ví dụ 25081990)"
+ *           example:
+ *             maThe: "DN1234567890123"
+ *             hoTen: "Nguyen Van A"
+ *             ngaySinh: "25081990"
+ *     responses:
+ *       200:
+ *         description: Thông tin thẻ BHYT hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Thông tin trả về từ API quốc gia
+ *       400:
+ *         description: Thông tin thẻ BHYT không hợp lệ hoặc lỗi xác thực
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+
+// ...existing code...
+const checkBHYTCard = async (req, res) => {
+  try {
+    const { maThe, hoTen, ngaySinh } = req.body;
+    if (!maThe || !hoTen || !ngaySinh) {
+      return res.status(400).json({ success: false, message: 'Thiếu thông tin thẻ BHYT' });
+    }
+    const result = await healthInsuranceExamService.checkBHYTCard({ maThe, hoTen, ngaySinh });
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+
+/**
+ * @swagger
  * /api/health-insurance-exams/book:
  *   post:
  *     summary: Đặt lịch khám bảo hiểm y tế
@@ -77,7 +149,8 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  */
 const createExam = async (req, res) => {
   try {
-    const result = await healthInsuranceExamService.createExam(req.body);
+    // Truyền role từ req.role vào service
+    const result = await healthInsuranceExamService.createExam({ ...req.body, role: req.role });
     return res.status(201).json({
       success: true,
       message: 'Đặt lịch khám thành công',
@@ -190,5 +263,6 @@ const checkExamByEncodedId = async (req, res) => {
 export default {
   createExam,
   getExamById,
-  checkExamByEncodedId
+  checkExamByEncodedId,
+  checkBHYTCard
 };

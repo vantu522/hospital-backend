@@ -3,6 +3,61 @@ import healthInsuranceExamRepository from '../repositories/health-insurance-exam
 import QRCode from 'qrcode';
 
 class HealthInsuranceExamService {
+  // Cache token/id_token cho BHYT
+  bhytTokenCache = { token: null, id_token: null, expires: 0 };
+
+  async getBHYTToken() {
+    const username = process.env.BHYT_USERNAME;
+    const password = process.env.BHYT_PASSWORD;
+    const now = Date.now();
+    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token && this.bhytTokenCache.expires > now) {
+      return this.bhytTokenCache;
+    }
+    const axios = (await import('axios')).default;
+    const tokenRes = await axios.post('https://egw.baohiemxahoi.gov.vn/api/token/take', {
+      username,
+      password
+    });
+    this.bhytTokenCache = {
+      token: tokenRes.data.token,
+      id_token: tokenRes.data.id_token,
+      expires: now + (tokenRes.data.expires_in || 3600) * 1000
+    };
+    return this.bhytTokenCache;
+  }
+
+  async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
+    const username = process.env.BHYT_USERNAME;
+    const password = process.env.BHYT_PASSWORD;
+    const hoTenCb = process.env.BHYT_HOTENCB;
+    const cccdCb = process.env.BHYT_CCCDCB;
+    const axios = (await import('axios')).default;
+    let { token, id_token } = await this.getBHYTToken();
+    const checkUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+    const body = { maThe, hoTen, ngaySinh, hoTenCb, cccdCb };
+    let response;
+    try {
+      response = await axios.post(checkUrl, body);
+      return { success: true, data: response.data };
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        // Token hết hạn, lấy lại token rồi thử lại
+        ({ token, id_token } = await this.getBHYTToken());
+        const retryUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+        response = await axios.post(retryUrl, body);
+        return { success: true, data: response.data };
+      }
+      return { success: false, message: err.message };
+    }
+  }
+  // Hàm đẩy thông tin lên hệ thống HIS
+  async pushToHIS(exam) {
+    // TODO: Gọi API hoặc thực hiện logic gửi dữ liệu lên hệ thống HIS của bệnh viện
+    // Ví dụ:
+    // await axios.post(HIS_API_URL, exam);
+    console.log('Đẩy thông tin lên HIS:', exam._id);
+    // Trả về kết quả hoặc xử lý lỗi nếu cần
+  }
   async createExam(data) {
     // 1. Kiểm tra slot chung theo ngày + khung giờ + chuyên khoa
     const { exam_date, exam_time, specialty, role } = data;
@@ -35,6 +90,12 @@ class HealthInsuranceExamService {
     data.status = role === 'receptionist' ? 'accept' : 'pending';
     // 5. Tạo lịch khám, lưu slotId và loại hình khám
     data.slotId = slot._id;
+    // Nếu status là accept, tự động gán order_number tăng dần
+    if (data.status === 'accept') {
+      const HealthInsuranceExam = (await import('../models/health-insurance-exam.model.js')).default;
+      const maxOrder = await HealthInsuranceExam.findOne({}, {}, { sort: { order_number: -1 } });
+      data.order_number = maxOrder && maxOrder.order_number ? maxOrder.order_number + 1 : 1;
+    }
     const exam = await healthInsuranceExamRepository.create(data);
     // 6. Tạo mã QR code base64 chứa id
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
@@ -76,9 +137,13 @@ class HealthInsuranceExamService {
       await exam.save();
       return { valid: false, message: 'Lịch khám bị hủy do tới trễ quá 15 phút', exam };
     }
-    // Nếu hợp lệ, đổi status thành accept
+    // Nếu hợp lệ, đổi status thành accept và gán order_number tự động
     if (exam.status !== 'accept') {
       exam.status = 'accept';
+      // Gán order_number tăng dần
+      const HealthInsuranceExam = (await import('../models/health-insurance-exam.model.js')).default;
+      const maxOrder = await HealthInsuranceExam.findOne({}, {}, { sort: { order_number: -1 } });
+      exam.order_number = maxOrder && maxOrder.order_number ? maxOrder.order_number + 1 : 1;
       await exam.save();
     }
     return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };

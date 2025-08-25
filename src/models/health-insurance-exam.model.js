@@ -25,6 +25,8 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   exam_time: { type: String, required: true },
   symptoms: { type: String, trim: true },
   status: { type: String, enum: ['pending', 'accept', 'reject'], default: 'pending' },
+  is_priority: { type: Boolean, default: false },
+  order_number: { type: Number, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('HealthInsuranceExam', HealthInsuranceExamSchema);
