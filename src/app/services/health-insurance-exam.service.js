@@ -41,22 +41,32 @@ class HealthInsuranceExamService {
     const hoTenCb = process.env.BHYT_HOTENCB;
     const cccdCb = process.env.BHYT_CCCDCB;
     const axios = (await import('axios')).default;
-    let { token, id_token } = await this.getBHYTToken();
+    console.log('[BHYT] Bắt đầu kiểm tra thẻ:', { maThe, hoTen, ngaySinh });
+    let { token, id_token, expires } = await this.getBHYTToken();
+    console.log('[BHYT] Token hiện tại:', { token, id_token, expires });
     const checkUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
     const body = { maThe, hoTen, ngaySinh, hoTenCb, cccdCb };
+    console.log('[BHYT] Gửi request tới API quốc gia:', checkUrl, body);
     try {
       let response = await axios.post(checkUrl, body);
+      console.log('[BHYT] Response lần 1:', response.data);
       if (response.data && response.data.maKetQua === "401") {
-        // Nếu token sai, gọi lại lấy token mới và thử lại một lần
-        ({ token, id_token } = await this.getBHYTToken());
+        console.log('[BHYT] Token sai/hết hạn, lấy lại token mới...');
+        ({ token, id_token, expires } = await this.getBHYTToken());
+        console.log('[BHYT] Token mới:', { token, id_token, expires });
         const retryUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+        console.log('[BHYT] Gửi lại request với token mới:', retryUrl, body);
         response = await axios.post(retryUrl, body);
+        console.log('[BHYT] Response lần 2:', response.data);
         if (response.data && response.data.maKetQua === "401") {
+          console.log('[BHYT] Token vẫn sai sau khi refresh, trả về lỗi.');
           return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
         }
       }
+      console.log('[BHYT] Kiểm tra thẻ thành công:', response.data);
       return { success: true, data: response.data };
     } catch (err) {
+      console.log('[BHYT] Lỗi khi gọi API:', err.message);
       return { success: false, message: err.message };
     }
   }
