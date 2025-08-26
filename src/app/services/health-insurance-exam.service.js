@@ -35,21 +35,23 @@ class HealthInsuranceExamService {
     let { token, id_token } = await this.getBHYTToken();
     const checkUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
     const body = { maThe, hoTen, ngaySinh, hoTenCb, cccdCb };
-    let response;
     try {
-      response = await axios.post(checkUrl, body);
-      return { success: true, data: response.data };
-    } catch (err) {
-      if (err.response && err.response.status === 401) {
-        // Token hết hạn, lấy lại token rồi thử lại
+      let response = await axios.post(checkUrl, body);
+      if (response.data && response.data.maKetQua === "401") {
+        // Nếu token sai, gọi lại lấy token mới và thử lại một lần
         ({ token, id_token } = await this.getBHYTToken());
         const retryUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
         response = await axios.post(retryUrl, body);
-        return { success: true, data: response.data };
+        if (response.data && response.data.maKetQua === "401") {
+          return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
+        }
       }
+      return { success: true, data: response.data };
+    } catch (err) {
       return { success: false, message: err.message };
     }
   }
+  
   // Hàm đẩy thông tin lên hệ thống HIS
   async pushToHIS(exam) {
     // TODO: Gọi API hoặc thực hiện logic gửi dữ liệu lên hệ thống HIS của bệnh viện
