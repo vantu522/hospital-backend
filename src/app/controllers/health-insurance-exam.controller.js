@@ -26,11 +26,11 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  *                 description: Họ tên người khám
  *               ngaySinh:
  *                 type: string
- *                 description: "Ngày sinh (ddmmyyyy, ví dụ 25081990)"
+ *                 description: "Ngày sinh (dd/mm/yyyy, ví dụ 25/08/1990)"
  *           example:
  *             maThe: "DN1234567890123"
  *             hoTen: "Nguyen Van A"
- *             ngaySinh: "25081990"
+ *             ngaySinh: "25/08/1990"
  *     responses:
  *       200:
  *         description: Thông tin thẻ BHYT hợp lệ

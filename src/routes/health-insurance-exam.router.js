@@ -11,6 +11,8 @@ router.post('/book', validateInsuranceExam, healthInsuranceExamController.create
 // Check hiệu lực lịch khám bằng mã QR (encoded_id qua path)
 router.get('/check/:encoded_id', healthInsuranceExamController.checkExamByEncodedId);
 
+// Kiểm tra ngày hiệu lực/ngày hết hạn thẻ BHYT
+router.post('/check-bhyt-date', healthInsuranceExamController.checkBHYTCard);
 // Lấy lịch khám theo id
 router.get('/:id', healthInsuranceExamController.getExamById);
 
