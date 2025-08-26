@@ -15,8 +15,8 @@ class HealthInsuranceExamService {
     }
     const axios = (await import('axios')).default;
     const tokenRes = await axios.post('https://egw.baohiemxahoi.gov.vn/api/token/take', {
-      username,
-      password
+      username : username,
+      password : password
     });
     this.bhytTokenCache = {
       token: tokenRes.data.token,
