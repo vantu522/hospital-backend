@@ -19,11 +19,19 @@ class HealthInsuranceExamService {
       username : username,
       password : password
     });
-    this.bhytTokenCache = {
-      token: tokenRes.data.token,
-      id_token: tokenRes.data.id_token,
-      expires: now + (tokenRes.data.expires_in || 3600) * 1000
-    };
+      // Đáp ứng dữ liệu mới: lấy từ tokenRes.data.APIKey
+      const apiKey = tokenRes.data.APIKey || {};
+      // expires_in là dạng ISO, cần chuyển sang timestamp
+      let expires = now + 3600 * 1000;
+      if (apiKey.expires_in) {
+        const expDate = new Date(apiKey.expires_in);
+        expires = expDate.getTime();
+      }
+      this.bhytTokenCache = {
+        token: apiKey.access_token || '',
+        id_token: apiKey.id_token || '',
+        expires
+      };
     return this.bhytTokenCache;
   }
 
