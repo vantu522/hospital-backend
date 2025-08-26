@@ -2,7 +2,7 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
 
 /**
  * @swagger
- * /api/health-insurance-exams/check-bhyt:
+ * /api/health-insurance-exams/check-bhyt-date:
  *   post:
  *     summary: Kiểm tra thông tin thẻ BHYT qua API quốc gia
  *     tags:
