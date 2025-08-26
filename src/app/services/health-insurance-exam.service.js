@@ -1,4 +1,5 @@
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
+import axios from 'axios';
 
 import QRCode from 'qrcode';
 
