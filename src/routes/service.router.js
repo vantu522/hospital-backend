@@ -8,7 +8,7 @@ const serviceRouter = Router();
 
 serviceRouter.post(
   "/",
-  requireSuperAdmin,
+  requireAdminOrSuperadmin,
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "images", maxCount: 5 },

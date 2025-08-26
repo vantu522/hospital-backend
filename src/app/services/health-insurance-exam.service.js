@@ -1,4 +1,5 @@
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
+import axios from 'axios';
 
 import QRCode from 'qrcode';
 
@@ -16,7 +17,7 @@ class HealthInsuranceExamService {
     const axios = (await import('axios')).default;
     const tokenRes = await axios.post('https://egw.baohiemxahoi.gov.vn/api/token/take', {
       username,
-      password
+      passwordd
     });
     this.bhytTokenCache = {
       token: tokenRes.data.token,
