@@ -4,10 +4,20 @@ import axios from 'axios';
 import QRCode from 'qrcode';
 
 class HealthInsuranceExamService {
+  // Lock để đồng bộ lấy token mới khi gặp lỗi 401
+  bhytTokenLock = false;
   // Cache token/id_token cho BHYT
   bhytTokenCache = { token: null, id_token: null, expires: 0 };
 
   async getBHYTToken() {
+    // Nếu đang lấy token mới, các request khác sẽ chờ
+    while (this.bhytTokenLock) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token) {
+      return this.bhytTokenCache;
+    }
+    this.bhytTokenLock = true;
     const username = process.env.BHYT_USERNAME;
     const password = process.env.BHYT_PASSWORD;
     // Luôn trả về token trong cache, không kiểm tra thời gian hết hạn
@@ -27,6 +37,7 @@ class HealthInsuranceExamService {
       token: apiKey.access_token || '',
       id_token: apiKey.id_token || ''
     };
+    this.bhytTokenLock = false;
     return this.bhytTokenCache;
   }
 
@@ -49,9 +60,15 @@ class HealthInsuranceExamService {
       if (response.data && response.data.maKetQua === "401") {
         console.log('[BHYT] Token sai/hết hạn, lấy lại token mới...');
         this.bhytTokenCache = { token: null, id_token: null, expires: 0 };
+        // Nếu đang lấy token mới, các request khác sẽ chờ
+        while (this.bhytTokenLock) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
         ({ token, id_token, expires } = await this.getBHYTToken());
         console.log('[BHYT] Token mới:', { token, id_token, expires });
-  const retryUrl = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+        // Đợi 1s trước khi gọi lại API check BHYT
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retryUrl = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
         console.log('[BHYT] Gửi lại request với token mới:', retryUrl, body);
         response = await axios.post(retryUrl, body);
         console.log('[BHYT] Response lần 2:', response.data);
