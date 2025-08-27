@@ -10,28 +10,23 @@ class HealthInsuranceExamService {
   async getBHYTToken() {
     const username = process.env.BHYT_USERNAME;
     const password = process.env.BHYT_PASSWORD;
-    const now = Date.now();
-    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token && this.bhytTokenCache.expires > now) {
+    // Luôn trả về token trong cache, không kiểm tra thời gian hết hạn
+    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token) {
       return this.bhytTokenCache;
     }
+    // Nếu chưa có token thì gọi API lấy mới
     const axios = (await import('axios')).default;
-    const tokenRes = await axios.post('https://egw.baohiemxahoi.gov.vn/api/token/take', {
+    const bhytTokenUrl = process.env.BHYT_TOKEN_URL;
+    const tokenRes = await axios.post(bhytTokenUrl, {
       username : username,
       password : password
     });
-      // Đáp ứng dữ liệu mới: lấy từ tokenRes.data.APIKey
-      const apiKey = tokenRes.data.APIKey || {};
-      // expires_in là dạng ISO, cần chuyển sang timestamp
-      let expires = now + 3600 * 1000;
-      if (apiKey.expires_in) {
-        const expDate = new Date(apiKey.expires_in);
-        expires = expDate.getTime();
-      }
-      this.bhytTokenCache = {
-        token: apiKey.access_token || '',
-        id_token: apiKey.id_token || '',
-        expires
-      };
+    console.log('[BHYT] Data trả về khi login lấy token:', tokenRes.data);
+    const apiKey = tokenRes.data.APIKey || {};
+    this.bhytTokenCache = {
+      token: apiKey.access_token || '',
+      id_token: apiKey.id_token || ''
+    };
     return this.bhytTokenCache;
   }
 
@@ -44,7 +39,8 @@ class HealthInsuranceExamService {
     console.log('[BHYT] Bắt đầu kiểm tra thẻ:', { maThe, hoTen, ngaySinh });
     let { token, id_token, expires } = await this.getBHYTToken();
     console.log('[BHYT] Token hiện tại:', { token, id_token, expires });
-    const checkUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+  const bhytCheckUrl = process.env.BHYT_CHECK_URL;
+  const checkUrl = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
     const body = { maThe, hoTen, ngaySinh, hoTenCb, cccdCb };
     console.log('[BHYT] Gửi request tới API quốc gia:', checkUrl, body);
     try {
@@ -52,9 +48,10 @@ class HealthInsuranceExamService {
       console.log('[BHYT] Response lần 1:', response.data);
       if (response.data && response.data.maKetQua === "401") {
         console.log('[BHYT] Token sai/hết hạn, lấy lại token mới...');
+        this.bhytTokenCache = { token: null, id_token: null, expires: 0 };
         ({ token, id_token, expires } = await this.getBHYTToken());
         console.log('[BHYT] Token mới:', { token, id_token, expires });
-        const retryUrl = `https://daotaoegw.baohiemxahoi.gov.vn/api/egw/KQNhanLichSuKCB2024?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+  const retryUrl = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
         console.log('[BHYT] Gửi lại request với token mới:', retryUrl, body);
         response = await axios.post(retryUrl, body);
         console.log('[BHYT] Response lần 2:', response.data);
