@@ -28,6 +28,34 @@ const options = {
         }
       },
       schemas: {
+        HealthInsuranceExam: {
+          type: 'object',
+          required: [
+            'full_name', 'citizen_id', 'date_of_birth', 'gender', 'address', 'specialty', 'exam_type', 'slotId', 'exam_date', 'exam_time'
+          ],
+          properties: {
+            _id: { type: 'string', description: 'Exam ID' },
+            full_name: { type: 'string', description: 'Họ tên bệnh nhân' },
+            phone_number: { type: 'string', description: 'Số điện thoại' },
+            email: { type: 'string', description: 'Email' },
+            citizen_id: { type: 'string', description: 'Số CCCD' },
+            date_of_birth: { type: 'string', format: 'date', description: 'Ngày sinh' },
+            gender: { type: 'string', enum: ['male', 'female', 'other'], description: 'Giới tính' },
+            address: { type: 'string', description: 'Địa chỉ' },
+            health_insurance_number: { type: 'string', description: 'Số thẻ BHYT' },
+            specialty: { type: 'string', description: 'ID chuyên khoa' },
+            exam_type: { type: 'string', enum: ['BHYT', 'DV'], description: 'Loại hình khám' },
+            slotId: { type: 'string', description: 'ID slot khám' },
+            exam_date: { type: 'string', format: 'date', description: 'Ngày khám' },
+            exam_time: { type: 'string', description: 'Giờ khám' },
+            symptoms: { type: 'string', description: 'Triệu chứng' },
+            status: { type: 'string', enum: ['pending', 'accept', 'reject'], description: 'Trạng thái' },
+            is_priority: { type: 'boolean', description: 'Ưu tiên' },
+            order_number: { type: 'number', description: 'Số thứ tự khám' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         User: {
           type: 'object',
           required: ['name', 'email', 'password'],
