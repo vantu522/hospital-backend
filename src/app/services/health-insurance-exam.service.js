@@ -1,23 +1,17 @@
+
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
 import axios from 'axios';
-
+import cron from 'node-cron';
 import QRCode from 'qrcode';
+import http from 'http';
+import https from 'https';
+
 
 class HealthInsuranceExamService {
-  // Lock để đồng bộ lấy token mới khi gặp lỗi 401
-  bhytTokenLock = false;
   // Cache token/id_token cho BHYT
   bhytTokenCache = { token: null, id_token: null, expires: 0 };
 
   async getBHYTToken() {
-    // Nếu đang lấy token mới, các request khác sẽ chờ
-    while (this.bhytTokenLock) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token) {
-      return this.bhytTokenCache;
-    }
-    this.bhytTokenLock = true;
     const username = process.env.BHYT_USERNAME;
     const password = process.env.BHYT_PASSWORD;
     // Luôn trả về token trong cache, không kiểm tra thời gian hết hạn
@@ -37,7 +31,6 @@ class HealthInsuranceExamService {
       token: apiKey.access_token || '',
       id_token: apiKey.id_token || ''
     };
-    this.bhytTokenLock = false;
     return this.bhytTokenCache;
   }
 
@@ -60,10 +53,6 @@ class HealthInsuranceExamService {
       if (response.data && response.data.maKetQua === "401") {
         console.log('[BHYT] Token sai/hết hạn, lấy lại token mới...');
         this.bhytTokenCache = { token: null, id_token: null, expires: 0 };
-        // Nếu đang lấy token mới, các request khác sẽ chờ
-        while (this.bhytTokenLock) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
         ({ token, id_token, expires } = await this.getBHYTToken());
         console.log('[BHYT] Token mới:', { token, id_token, expires });
         // Đợi 1s trước khi gọi lại API check BHYT
@@ -185,4 +174,39 @@ class HealthInsuranceExamService {
   }
 }
 
-export default new HealthInsuranceExamService();
+
+const healthInsuranceExamServiceInstance = new HealthInsuranceExamService();
+
+// Ping nhẹ mỗi 2 phút để giữ connection
+cron.schedule("*/1 * * * *", async () => {
+  try {
+    console.log("[BHYT] Cron keep-alive chạy...");
+    const { token, id_token } = await healthInsuranceExamServiceInstance.getBHYTToken();
+    const username = process.env.BHYT_USERNAME;
+    const password = process.env.BHYT_PASSWORD;
+    const bhytCheckUrl = process.env.BHYT_CHECK_URL;
+
+    // body test đơn giản
+    const body = {
+      maThe: "TE123456789",
+      hoTen: "TEST",
+      ngaySinh: "2000-01-01",
+      hoTenCb: process.env.BHYT_HOTENCB,
+      cccdCb: process.env.BHYT_CCCDCB
+    };
+
+    const checkUrl = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+
+    await axios.post(checkUrl, body, {
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+      timeout: 10000
+    });
+
+    console.log("[BHYT] Ping keep-alive thành công");
+  } catch (err) {
+    console.log("[BHYT] Lỗi khi ping keep-alive:", err.message);
+  }
+});
+
+export default healthInsuranceExamServiceInstance;
