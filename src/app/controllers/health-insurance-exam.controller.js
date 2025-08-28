@@ -93,7 +93,6 @@ const checkBHYTCard = async (req, res) => {
  *               - address
  *               - specialty
  *               - exam_type
- *               - slotId
  *               - exam_date
  *               - exam_time
  *             properties:
@@ -123,9 +122,6 @@ const checkBHYTCard = async (req, res) => {
  *                 type: string
  *                 enum: [BHYT, DV]
  *                 description: Loại hình khám
- *               slotId:
- *                 type: string
- *                 description: ObjectId của slot khám
  *               exam_date:
  *                 type: string
  *                 format: date
@@ -133,13 +129,6 @@ const checkBHYTCard = async (req, res) => {
  *                 type: string
  *               symptoms:
  *                 type: string
- *               status:
- *                 type: string
- *                 enum: [pending, accept, reject]
- *                 description: Trạng thái
- *               is_priority:
- *                 type: boolean
- *                 description: Ưu tiên
  *     responses:
  *       201:
  *         description: Đặt lịch khám thành công

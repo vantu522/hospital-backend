@@ -123,11 +123,11 @@ class HealthInsuranceExamService {
   async createExam(data) {
     // 1. Kiểm tra slot chung theo ngày + khung giờ + chuyên khoa
     const { exam_date, exam_time, specialty, role } = data;
-    const ScheduleSlot = (await import('../models/schedule-slot.model.js')).default;
+  const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
     let slot = await ScheduleSlot.findOne({ date: exam_date, timeSlot: exam_time, specialty });
     // 2. Nếu chưa có slot, sinh slot từ TimeSlotTemplate
     if (!slot) {
-      const TimeSlotTemplate = (await import('../models/time-slot-template.model.js')).default;
+  const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
       const template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
       if (!template) {
         throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
@@ -154,7 +154,7 @@ class HealthInsuranceExamService {
     data.slotId = slot._id;
     // Nếu status là accept, tự động gán order_number tăng dần
     if (data.status === 'accept') {
-      const HealthInsuranceExam = (await import('../models/health-insurance-exam.model.js')).default;
+  const HealthInsuranceExam = (await import('../../models/health-insurance-exam.model.js')).default;
       const maxOrder = await HealthInsuranceExam.findOne({}, {}, { sort: { order_number: -1 } });
       data.order_number = maxOrder && maxOrder.order_number ? maxOrder.order_number + 1 : 1;
     }
