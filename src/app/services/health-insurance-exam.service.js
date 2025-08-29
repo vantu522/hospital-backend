@@ -160,11 +160,18 @@ class HealthInsuranceExamService {
       data.order_number = maxOrder && maxOrder.order_number ? maxOrder.order_number + 1 : 1;
     }
     const exam = await healthInsuranceExamRepository.create(data);
+    // Lấy thông tin phòng khám
+    const ClinicRoom = (await import('../../models/clinic-room.model.js')).default;
+    const clinicRoomObj = await ClinicRoom.findById(exam.clinicRoom).lean();
     // 6. Tạo mã QR code base64 chứa id
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
     const qrImageBase64 = await QRCode.toDataURL(encodedId);
+    // Trả về bản ghi kèm thông tin phòng khám
     return {
-      exam,
+      exam: {
+        ...exam.toObject(),
+        clinicRoom: clinicRoomObj ? clinicRoomObj.name : ''
+      },
       qr_code: qrImageBase64,
       encoded_id: encodedId
     };
