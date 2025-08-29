@@ -1,3 +1,130 @@
+/**
+ * @swagger
+ * /api/schedule-slots:
+ *   post:
+ *     summary: Tạo khung giờ khám
+ *     tags: [ScheduleSlot]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - timeSlot
+ *               - clinicRoom
+ *               - capacity
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               timeSlot:
+ *                 type: string
+ *               clinicRoom:
+ *                 type: string
+ *                 description: ObjectId của phòng khám
+ *               capacity:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Tạo thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/ScheduleSlot'
+ *       400:
+ *         description: Lỗi tạo khung giờ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *   get:
+ *     summary: Lấy danh sách khung giờ khám
+ *     tags: [ScheduleSlot]
+ *     responses:
+ *       200:
+ *         description: Danh sách khung giờ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ScheduleSlot'
+ *       400:
+ *         description: Lỗi truy vấn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ * /api/schedule-slots/{id}:
+ *   delete:
+ *     summary: Xóa khung giờ khám
+ *     tags: [ScheduleSlot]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ObjectId khung giờ
+ *     responses:
+ *       200:
+ *         description: Xóa thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/ScheduleSlot'
+ *       404:
+ *         description: Không tìm thấy khung giờ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Lỗi xóa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
 import ScheduleSlotService from '../services/schedule-slot.service.js';
 
 // Tạo khung giờ khám
