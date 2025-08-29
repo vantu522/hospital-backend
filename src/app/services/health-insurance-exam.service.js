@@ -128,13 +128,41 @@ class HealthInsuranceExamService {
     // 2. Nếu chưa có slot, sinh slot từ TimeSlotTemplate
     if (!slot) {
       const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
-      const template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
+      let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
+      // Nếu không tìm thấy khung giờ mẫu
       if (!template) {
-        throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+        // Nếu đặt lịch tại kiosk thì chọn khung giờ gần nhất
+        if (data.role === 'receptionist') {
+          // Lấy tất cả khung giờ mẫu đang hoạt động
+          const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
+          // Chuyển time sang phút để so sánh
+          const toMinutes = (t) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+          };
+          const target = toMinutes(exam_time);
+          // Tìm khung giờ gần nhất
+          let nearest = null;
+          let minDiff = Infinity;
+          for (const tpl of templates) {
+            const diff = Math.abs(toMinutes(tpl.time) - target);
+            if (diff < minDiff) {
+              minDiff = diff;
+              nearest = tpl;
+            }
+          }
+          if (!nearest) {
+            throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+          }
+          template = nearest;
+          data.exam_time = template.time; // cập nhật lại giờ khám theo khung giờ gần nhất
+        } else {
+          throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+        }
       }
       slot = await ScheduleSlot.create({
         date: exam_date,
-        timeSlot: exam_time,
+        timeSlot: data.exam_time,
         clinicRoom,
         capacity: template.capacity,
         currentCount: 1,
