@@ -9,11 +9,11 @@ const ScheduleSlotSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  specialty: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Specialty',
-    required: true,
-  },
+  clinicRoom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ClinicRoom',
+      required: true,
+    },
   capacity: {
     type: Number,
     required: true,

@@ -1,11 +1,12 @@
 import express from 'express';
 import healthInsuranceExamController from '../app/controllers/health-insurance-exam.controller.js';
 import validateInsuranceExam from '../app/middlewares/health-insurance-exam.validator.js';
+import { attachRole } from '../app/middlewares/auth.js';
 
 const router = express.Router();
 
 // Đặt lịch khám bảo hiểm y tế
-router.post('/book', validateInsuranceExam, healthInsuranceExamController.createExam);
+router.post('/book', validateInsuranceExam,attachRole, healthInsuranceExamController.createExam);
 
 
 // Check hiệu lực lịch khám bằng mã QR (encoded_id qua path)

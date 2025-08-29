@@ -121,13 +121,13 @@ class HealthInsuranceExamService {
     // Trả về kết quả hoặc xử lý lỗi nếu cần
   }
   async createExam(data) {
-    // 1. Kiểm tra slot chung theo ngày + khung giờ + chuyên khoa
-    const { exam_date, exam_time, specialty, role } = data;
+  // 1. Kiểm tra slot chung theo ngày + khung giờ + phòng khám
+  const { exam_date, exam_time, clinicRoom, role } = data;
   const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
-    let slot = await ScheduleSlot.findOne({ date: exam_date, timeSlot: exam_time, specialty });
+  let slot = await ScheduleSlot.findOne({ date: exam_date, timeSlot: exam_time, clinicRoom });
     // 2. Nếu chưa có slot, sinh slot từ TimeSlotTemplate
     if (!slot) {
-  const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
+      const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
       const template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
       if (!template) {
         throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
@@ -135,7 +135,7 @@ class HealthInsuranceExamService {
       slot = await ScheduleSlot.create({
         date: exam_date,
         timeSlot: exam_time,
-        specialty,
+        clinicRoom,
         capacity: template.capacity,
         currentCount: 1,
         is_active: true
@@ -150,8 +150,9 @@ class HealthInsuranceExamService {
     }
     // 4. Xác định status theo role
     data.status = role === 'receptionist' ? 'accept' : 'pending';
-    // 5. Tạo lịch khám, lưu slotId và loại hình khám
-    data.slotId = slot._id;
+  // 5. Tạo lịch khám, lưu slotId và clinicRoom
+  data.slotId = slot._id;
+  data.clinicRoom = clinicRoom;
     // Nếu status là accept, tự động gán order_number tăng dần
     if (data.status === 'accept') {
   const HealthInsuranceExam = (await import('../../models/health-insurance-exam.model.js')).default;

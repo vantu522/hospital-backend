@@ -5,7 +5,7 @@ const ScheduleSlotService = {
     return await ScheduleSlot.create(data);
   },
   async getSlots() {
-    return await ScheduleSlot.find().populate({ path: 'specialty', select: '_id name' });
+  return await ScheduleSlot.find().populate('clinicRoom');
   },
   async deleteSlot(id) {
     return await ScheduleSlot.findByIdAndDelete(id);

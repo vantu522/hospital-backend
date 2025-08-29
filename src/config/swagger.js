@@ -28,10 +28,25 @@ const options = {
         }
       },
       schemas: {
+        ClinicRoom: {
+          type: 'object',
+          required: ['name', 'rooms'],
+          properties: {
+            _id: { type: 'string', description: 'ClinicRoom ID' },
+            name: { type: 'string', description: 'Tên chuyên khoa/phòng khám' },
+            rooms: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Danh sách các phòng thuộc chuyên khoa/phòng khám'
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         HealthInsuranceExam: {
           type: 'object',
           required: [
-            'full_name', 'citizen_id', 'date_of_birth', 'gender', 'address', 'specialty', 'exam_type', 'slotId', 'exam_date', 'exam_time'
+            'full_name', 'citizen_id', 'date_of_birth', 'gender', 'address', 'clinicRoom', 'exam_type', 'slotId', 'exam_date', 'exam_time'
           ],
           properties: {
             _id: { type: 'string', description: 'Exam ID' },
@@ -43,7 +58,7 @@ const options = {
             gender: { type: 'string', enum: ['male', 'female', 'other'], description: 'Giới tính' },
             address: { type: 'string', description: 'Địa chỉ' },
             health_insurance_number: { type: 'string', description: 'Số thẻ BHYT' },
-            specialty: { type: 'string', description: 'ID chuyên khoa' },
+            clinicRoom: { type: 'string', description: 'ID phòng khám (ClinicRoom)' },
             exam_type: { type: 'string', enum: ['BHYT', 'DV'], description: 'Loại hình khám' },
             slotId: { type: 'string', description: 'ID slot khám' },
             exam_date: { type: 'string', format: 'date', description: 'Ngày khám' },

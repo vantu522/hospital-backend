@@ -91,7 +91,7 @@ const checkBHYTCard = async (req, res) => {
  *               - date_of_birth
  *               - gender
  *               - address
- *               - specialty
+ *               - clinicRoom
  *               - exam_type
  *               - exam_date
  *               - exam_time
@@ -115,9 +115,9 @@ const checkBHYTCard = async (req, res) => {
  *                 type: string
  *               health_insurance_number:
  *                 type: string
- *               specialty:
+ *               clinicRoom:
  *                 type: string
- *                 description: ObjectId của chuyên khoa
+ *                 description: ObjectId của phòng khám (ClinicRoom)
  *               exam_type:
  *                 type: string
  *                 enum: [BHYT, DV]
@@ -154,6 +154,15 @@ const createExam = async (req, res) => {
   try {
     // Truyền role từ req.role vào service
     const result = await healthInsuranceExamService.createExam({ ...req.body, role: req.role });
+    // Nếu role là receptionist thì không trả về qr_code và encoded_id
+    if (req.role === 'receptionist') {
+      return res.status(201).json({
+        success: true,
+        message: 'Đặt lịch khám thành công',
+        data: result.exam
+      });
+    }
+    // Trường hợp còn lại vẫn trả về qr_code và encoded_id
     return res.status(201).json({
       success: true,
       message: 'Đặt lịch khám thành công',

@@ -1,3 +1,4 @@
+import clinicRoomRouter from "./clinic-room.router.js";
 import doctorRouter from "./doctor.router.js";
 import newsRouter from "./news.router.js";
 import recruitmentRouter from "./recruitment.router.js";
@@ -28,6 +29,7 @@ function route(app){
     app.use('/api/background-banners', backgroundBannerRouter);
     app.use('/api/health-insurance-exams', healthInsuranceExamRouter);
     app.use('/api/customers', customerRouter);
+    app.use('/api/clinic-rooms', clinicRoomRouter);
 }
 
 export default route;
