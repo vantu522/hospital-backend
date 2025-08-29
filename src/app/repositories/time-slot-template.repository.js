@@ -1,4 +1,4 @@
-import TimeSlotTemplate from '../models/time-slot-template.model.js';
+import TimeSlotTemplate from '../../models/time-slot-template.model.js';
 
 class TimeSlotTemplateRepository {
   async create(data) {
