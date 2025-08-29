@@ -1,4 +1,5 @@
 import clinicRoomRouter from "./clinic-room.router.js";
+import timeSlotTemplateRouter from "./time-slot-template.router.js";
 import doctorRouter from "./doctor.router.js";
 import newsRouter from "./news.router.js";
 import recruitmentRouter from "./recruitment.router.js";
@@ -30,6 +31,7 @@ function route(app){
     app.use('/api/health-insurance-exams', healthInsuranceExamRouter);
     app.use('/api/customers', customerRouter);
     app.use('/api/clinic-rooms', clinicRoomRouter);
+    app.use('/api/time-slot-templates', timeSlotTemplateRouter);
 }
 
 export default route;
