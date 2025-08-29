@@ -6,7 +6,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   email: { type: String, trim: true },
   citizen_id: { type: String, required: true, trim: true },
   date_of_birth: { type: Date, required: true },
-  gender: { type: String, required: true, enum: ['male', 'female', 'other'] },
+  gender: { type: String, required: true, enum: ['Nam', 'Nữ', 'Khác'] },
   address: { type: String, required: true, trim: true },
   health_insurance_number: { type: String, trim: true }, // BHYT 
   clinicRoom: { type: mongoose.Schema.Types.ObjectId, ref: 'ClinicRoom', required: true },

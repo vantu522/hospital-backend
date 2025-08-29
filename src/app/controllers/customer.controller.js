@@ -138,8 +138,8 @@ const login = async (req, res) => {
  *                 type: string
  *                 format: date
  *               gender:
- *                 type: string
- *                 enum: [male, female, other]
+*                 type: string
+*                 enum: [Nam, Nữ, Khác]
  *               address:
  *                 type: string
  *     responses:

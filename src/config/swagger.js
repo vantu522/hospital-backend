@@ -55,7 +55,7 @@ const options = {
             email: { type: 'string', description: 'Email' },
             citizen_id: { type: 'string', description: 'Số CCCD' },
             date_of_birth: { type: 'string', format: 'date', description: 'Ngày sinh' },
-            gender: { type: 'string', enum: ['male', 'female', 'other'], description: 'Giới tính' },
+            gender: { type: 'string', enum: ['Nam', 'Nữ', 'Khác'], description: 'Giới tính' },
             address: { type: 'string', description: 'Địa chỉ' },
             health_insurance_number: { type: 'string', description: 'Số thẻ BHYT' },
             clinicRoom: { type: 'string', description: 'ID phòng khám (ClinicRoom)' },
