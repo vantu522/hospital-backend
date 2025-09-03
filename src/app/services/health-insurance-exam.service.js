@@ -78,36 +78,102 @@ class HealthInsuranceExamService {
   // === Tạo hoặc lấy slot gần nhất nếu cần ===
   async getOrCreateSlot(exam_date, exam_time, clinicRoom, role) {
     const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
-    let slot = await ScheduleSlot.findOne({ date: exam_date, timeSlot: exam_time, clinicRoom });
+    const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
+    
+    let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
+    let adjustedTime = exam_time;
+    
+    // Nếu không tìm thấy template và là receptionist, tìm khung giờ gần nhất
+    if (!template && role === 'receptionist') {
+      console.log('[Schedule] Tìm khung giờ gần nhất cho:', exam_time);
+      const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
+      
+      if (templates.length === 0) {
+        throw new Error('Không có khung giờ mẫu nào đang hoạt động');
+      }
+
+      const toMinutes = t => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const target = toMinutes(exam_time);
+      
+      let nearest = null;
+      let minDiff = Infinity;
+      
+      // Tìm khung giờ có khoảng cách nhỏ nhất
+      for (const tpl of templates) {
+        const diff = Math.abs(toMinutes(tpl.time) - target);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nearest = tpl;
+        }
+      }
+      
+      console.log('[Schedule] Tìm khung giờ cho:', exam_time);
+      console.log('[Schedule] Các khung giờ hiện có:', templates.map(t => ({
+        time: t.time,
+        diff: Math.abs(toMinutes(t.time) - target) + ' phút'
+      })));
+      
+      console.log('[Schedule] Các khung giờ hiện có:', templates.map(t => t.time));
+
+      if (!nearest) {
+        throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+      }
+
+      template = nearest;
+      adjustedTime = template.time;
+      console.log('[Schedule] Đã điều chỉnh giờ khám:', {
+        from: exam_time,
+        to: adjustedTime,
+        diff: minDiff + ' phút'
+      });
+    } else if (!template) {
+      throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+    }
+
+    // Tìm hoặc tạo slot với giờ đã điều chỉnh
+    let slot = await ScheduleSlot.findOne({ 
+      date: exam_date, 
+      timeSlot: adjustedTime, 
+      clinicRoom 
+    });
 
     if (!slot) {
-      const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
-      let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
-      
-      if (!template && role === 'receptionist') {
-        const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
-        const toMinutes = t => t.split(':').map(Number).reduce((h,m)=>h*60+m);
-        const target = toMinutes(exam_time);
-        template = templates.reduce((nearest, tpl) => {
-          const diff = Math.abs(toMinutes(tpl.time)-target);
-          return (!nearest || diff < nearest.diff) ? { tpl, diff } : nearest;
-        }, null)?.tpl;
-        if (!template) throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
-        exam_time = template.time;
-      }
-      slot = await ScheduleSlot.create({ date: exam_date, timeSlot: exam_time, clinicRoom, capacity: template.capacity, currentCount: 1, is_active: true });
+      slot = await ScheduleSlot.create({
+        date: exam_date,
+        timeSlot: adjustedTime,
+        clinicRoom,
+        capacity: template.capacity,
+        currentCount: 1,
+        is_active: true
+      });
+      console.log('[Schedule] Tạo slot mới:', {
+        date: exam_date,
+        time: adjustedTime,
+        capacity: template.capacity
+      });
     } else {
-      if (slot.currentCount >= slot.capacity) throw new Error('Slot đã đầy, vui lòng chọn khung giờ khác');
+      if (slot.currentCount >= slot.capacity) {
+        throw new Error('Slot đã đầy, vui lòng chọn khung giờ khác');
+      }
       slot.currentCount += 1;
       await slot.save();
     }
 
-    return slot;
+    return {
+      slot,
+      adjustedTime
+    };
   }
 
   // === Tạo lịch khám ===
   async createExam(data) {
-    const slot = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.clinicRoom, data.role);
+    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.clinicRoom, data.role);
+    
+    // Cập nhật lại giờ khám nếu có điều chỉnh
+    data.exam_time = adjustedTime;
     data.status = data.role === 'receptionist' ? 'accept' : 'pending';
     data.slotId = slot._id;
     data.clinicRoom = slot.clinicRoom;
