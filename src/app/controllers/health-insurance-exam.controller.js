@@ -152,6 +152,33 @@ const checkBHYTCard = async (req, res) => {
  */
 const createExam = async (req, res) => {
   try {
+    // Kiểm tra exam_type để quyết định có cần check BHYT không
+    const { exam_type, health_insurance_number, full_name, date_of_birth } = req.body;
+    
+    // Nếu exam_type khác "DV" và có thông tin BHYT, thì check BHYT trước
+    if (exam_type && exam_type !== 'DV' && health_insurance_number && full_name && date_of_birth) {
+      try {
+        const bhytCheckResult = await healthInsuranceExamService.checkBHYTCard({
+          maThe: health_insurance_number,
+          hoTen: full_name,
+          ngaySinh: date_of_birth
+        });
+        
+        // Nếu check BHYT thất bại, trả về lỗi
+        if (!bhytCheckResult.success) {
+          return res.status(400).json({
+            success: false,
+            message: 'Thẻ BHYT không hợp lệ: ' + bhytCheckResult.message
+          });
+        }
+      } catch (bhytError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Lỗi kiểm tra thẻ BHYT: ' + bhytError.message
+        });
+      }
+    }
+    
     // Truyền role từ req.role vào service
     const result = await healthInsuranceExamService.createExam({ ...req.body, role: req.role });
     // Nếu role là receptionist thì không trả về qr_code và encoded_id
