@@ -21,7 +21,11 @@ class InformationService {
 
     // Validate contact information using repository method
     const contactErrors = informationRepository.validateContactInfo(data);
-    errors.push(...contactErrors);
+    if (contactErrors && Array.isArray(contactErrors)) {
+      for (let i = 0; i < contactErrors.length; i++) {
+        errors.push(contactErrors[i]);
+      }
+    }
 
     if (errors.length > 0) {
       throw new Error(errors.join(', '));
@@ -61,18 +65,48 @@ class InformationService {
     // Handle work_hours array
     if (body.work_hours !== undefined) {
       if (Array.isArray(body.work_hours)) {
-        data.work_hours = body.work_hours.map(hour => hour.trim()).filter(hour => hour);
+        const cleanHours = [];
+        for (let i = 0; i < body.work_hours.length; i++) {
+          const trimmed = body.work_hours[i] ? body.work_hours[i].trim() : '';
+          if (trimmed) {
+            cleanHours.push(trimmed);
+          }
+        }
+        data.work_hours = cleanHours;
       } else if (typeof body.work_hours === 'string') {
-        data.work_hours = body.work_hours.split(',').map(hour => hour.trim()).filter(hour => hour);
+        const parts = body.work_hours.split(',');
+        const cleanHours = [];
+        for (let i = 0; i < parts.length; i++) {
+          const trimmed = parts[i].trim();
+          if (trimmed) {
+            cleanHours.push(trimmed);
+          }
+        }
+        data.work_hours = cleanHours;
       }
     }
     
     // Handle license array
     if (body.license !== undefined) {
       if (Array.isArray(body.license)) {
-        data.license = body.license.map(lic => lic.trim()).filter(lic => lic);
+        const cleanLicenses = [];
+        for (let i = 0; i < body.license.length; i++) {
+          const trimmed = body.license[i] ? body.license[i].trim() : '';
+          if (trimmed) {
+            cleanLicenses.push(trimmed);
+          }
+        }
+        data.license = cleanLicenses;
       } else if (typeof body.license === 'string') {
-        data.license = body.license.split(',').map(lic => lic.trim()).filter(lic => lic);
+        const parts = body.license.split(',');
+        const cleanLicenses = [];
+        for (let i = 0; i < parts.length; i++) {
+          const trimmed = parts[i].trim();
+          if (trimmed) {
+            cleanLicenses.push(trimmed);
+          }
+        }
+        data.license = cleanLicenses;
       }
     }
 
@@ -216,47 +250,6 @@ class InformationService {
     };
   }
 
-  /**
-   * Validate and format contact data
-   */
-  validateContactData(data) {
-    const errors = [];
-    
-    // Email validation
-    if (data.email && !informationRepository.isValidEmail(data.email)) {
-      errors.push('Email không hợp lệ');
-    }
-    
-    // Phone validations
-    const phoneFields = ['phone_number', 'hotline', 'emergency_phone'];
-    phoneFields.forEach(field => {
-      if (data[field] && !informationRepository.isValidPhoneNumber(data[field])) {
-        errors.push(`${field.replace('_', ' ')} không hợp lệ`);
-      }
-    });
-    
-    if (errors.length > 0) {
-      throw new Error(errors.join(', '));
-    }
-    
-    return true;
-  }
-
-  /**
-   * Update specific contact information
-   */
-  async updateContactInfo(contactData) {
-    try {
-      this.validateContactData(contactData);
-      
-      const currentInfo = await this.getMainInformation();
-      const updateData = { ...currentInfo.toObject(), ...contactData };
-      
-      return await informationRepository.updateMainInformation(updateData);
-    } catch (error) {
-      throw error;
-    }
-  }
 }
 
 export default new InformationService();

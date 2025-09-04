@@ -228,7 +228,7 @@ export const getMainInformation = async (req, res) => {
  */
 export const updateInformation = async (req, res) => {
   try {
-    const result = await informationService.updateInformation(req.params.id, req.body);
+    const result = await informationService.updateInformation(req.params.id, req.body);    
     res.json(result);
   } catch (err) {
     const statusCode = err.message.includes('Không tìm thấy') ? 404 : 400;
