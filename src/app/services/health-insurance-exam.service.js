@@ -83,9 +83,9 @@ class HealthInsuranceExamService {
     let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
     let adjustedTime = exam_time;
     
-    // Nếu không tìm thấy template và là receptionist, tìm khung giờ gần nhất
+    // Nếu không tìm thấy template và là receptionist, tìm khung giờ tiếp theo
     if (!template && role === 'receptionist') {
-      console.log('[Schedule] Tìm khung giờ gần nhất cho:', exam_time);
+      console.log('[Schedule] Tìm khung giờ tiếp theo cho:', exam_time);
       const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
       
       if (templates.length === 0) {
@@ -98,37 +98,28 @@ class HealthInsuranceExamService {
       };
       const target = toMinutes(exam_time);
       
-      let nearest = null;
-      let minDiff = Infinity;
-      
-      // Tìm khung giờ có khoảng cách nhỏ nhất
-      for (const tpl of templates) {
-        const diff = Math.abs(toMinutes(tpl.time) - target);
-        if (diff < minDiff) {
-          minDiff = diff;
-          nearest = tpl;
-        }
-      }
+      // Tìm khung giờ tiếp theo (sau thời gian yêu cầu)
+      const nextSlots = templates
+        .filter(tpl => toMinutes(tpl.time) > target)
+        .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
       
       console.log('[Schedule] Tìm khung giờ cho:', exam_time);
-      console.log('[Schedule] Các khung giờ hiện có:', templates.map(t => ({
-        time: t.time,
-        diff: Math.abs(toMinutes(t.time) - target) + ' phút'
-      })));
-      
-      console.log('[Schedule] Các khung giờ hiện có:', templates.map(t => t.time));
+      console.log('[Schedule] Các khung giờ sau thời gian yêu cầu:', nextSlots.map(t => t.time));
 
-      if (!nearest) {
-        throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
+      // Nếu không có khung giờ nào sau thời gian yêu cầu, lấy khung giờ đầu tiên của ngày hôm sau
+      if (nextSlots.length === 0) {
+        const firstSlot = templates.sort((a, b) => toMinutes(a.time) - toMinutes(b.time))[0];
+        template = firstSlot;
+        adjustedTime = template.time;
+        console.log('[Schedule] Không có khung giờ nào sau thời gian yêu cầu, chọn khung giờ đầu tiên:', adjustedTime);
+      } else {
+        template = nextSlots[0];
+        adjustedTime = template.time;
+        console.log('[Schedule] Đã điều chỉnh giờ khám thành khung giờ tiếp theo:', {
+          from: exam_time,
+          to: adjustedTime
+        });
       }
-
-      template = nearest;
-      adjustedTime = template.time;
-      console.log('[Schedule] Đã điều chỉnh giờ khám:', {
-        from: exam_time,
-        to: adjustedTime,
-        diff: minDiff + ' phút'
-      });
     } else if (!template) {
       throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
     }
