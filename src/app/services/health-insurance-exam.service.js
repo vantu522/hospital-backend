@@ -25,7 +25,6 @@ class HealthInsuranceExamService {
         return await axios.post(url, body, { timeout: 15000, ...options });
       } catch (err) {
         if (['ECONNRESET','ECONNABORTED'].includes(err.code) || err.message.includes('timeout')) {
-          console.warn(`[BHYT] Lỗi mạng (${err.code || err.message}), retry ${attempt}/${maxRetry}`);
           lastError = err;
           await new Promise(r => setTimeout(r, 300));
           continue;
@@ -82,7 +81,6 @@ class HealthInsuranceExamService {
       let response = await requestAPI();
 
       if (response.data?.maKetQua === "401") {
-        console.log('[BHYT] Token sai/hết hạn, lấy token mới...');
         this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
         ({ token, id_token } = await this.getBHYTToken());
         await new Promise(r => setTimeout(r, 1000));
@@ -93,7 +91,17 @@ class HealthInsuranceExamService {
         }
       }
 
-      return { success: true, data: response.data };
+      // Chỉ có maKetQua = "000" là thành công, tất cả các mã khác đều là lỗi
+      if (response.data?.maKetQua === "000") {
+        return { success: true, data: response.data };
+      } else {
+        return { 
+          success: false, 
+          message: response.data?.ghiChu || `Thẻ BHYT không hợp lệ (mã lỗi: ${response.data?.maKetQua})`, 
+          code: response.data?.maKetQua,
+          data: response.data 
+        };
+      }
     } catch (err) {
       return { success: false, message: err.message };
     }

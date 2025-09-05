@@ -152,16 +152,25 @@ const checkBHYTCard = async (req, res) => {
  */
 const createExam = async (req, res) => {
   try {
-    // Kiểm tra exam_type để quyết định có cần check BHYT không
+    // Logic check BHYT dựa trên role
     const { exam_type, health_insurance_number, full_name, date_of_birth } = req.body;
     
-    // Nếu exam_type khác "DV" và có thông tin BHYT, thì check BHYT trước
-    if (exam_type && exam_type !== 'DV' && health_insurance_number && full_name && date_of_birth) {
+    // Chỉ call API BHYT nếu:
+    // 1. Role là 'user' (không phải receptionist)
+    // 2. exam_type là 'BHYT' (không phải 'DV')  
+    // 3. Có đầy đủ thông tin BHYT
+    if (req.role !== 'receptionist' && 
+        exam_type === 'BHYT' && 
+        health_insurance_number && 
+        full_name && 
+        date_of_birth) {
+      
       try {
+        // Mapping field names từ request format sang BHYT API format
         const bhytCheckResult = await healthInsuranceExamService.checkBHYTCard({
-          maThe: health_insurance_number,
-          hoTen: full_name,
-          ngaySinh: date_of_birth
+          maThe: health_insurance_number,    // health_insurance_number → maThe
+          hoTen: full_name,                  // full_name → hoTen  
+          ngaySinh: date_of_birth            // date_of_birth → ngaySinh
         });
         
         // Nếu check BHYT thất bại, trả về lỗi
@@ -181,6 +190,7 @@ const createExam = async (req, res) => {
     
     // Truyền role từ req.role vào service
     const result = await healthInsuranceExamService.createExam({ ...req.body, role: req.role });
+    
     // Nếu role là receptionist thì không trả về qr_code và encoded_id
     if (req.role === 'receptionist') {
       return res.status(201).json({
@@ -189,6 +199,7 @@ const createExam = async (req, res) => {
         data: result.exam
       });
     }
+    
     // Trường hợp còn lại vẫn trả về qr_code và encoded_id
     return res.status(201).json({
       success: true,
