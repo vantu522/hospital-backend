@@ -165,12 +165,27 @@ const createExam = async (req, res) => {
         full_name && 
         date_of_birth) {
       
+      console.log('🔍 [BOOKING] Calling BHYT API for user booking');
+      
       try {
-        // Mapping field names từ request format sang BHYT API format
+        // Convert date_of_birth sang format dd/mm/yyyy cho API BHYT
+        let formattedDate;
+        if (typeof date_of_birth === 'string' && date_of_birth.includes('/')) {
+          formattedDate = date_of_birth;
+        } else {
+          
+          const dateObj = new Date(date_of_birth);
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const year = dateObj.getFullYear();
+          formattedDate = `${day}/${month}/${year}`;
+        }
+        
+        
         const bhytCheckResult = await healthInsuranceExamService.checkBHYTCard({
-          maThe: health_insurance_number,    // health_insurance_number → maThe
-          hoTen: full_name,                  // full_name → hoTen  
-          ngaySinh: date_of_birth            // date_of_birth → ngaySinh
+          maThe: health_insurance_number,    
+          hoTen: full_name,                   
+          ngaySinh: formattedDate           
         });
         
         // Nếu check BHYT thất bại, trả về lỗi
