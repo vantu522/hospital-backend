@@ -35,7 +35,7 @@ class HealthInsuranceExamService {
     throw lastError;
   }
 
-  // === Lấy token BHYT với TTL cache (30 phút) ===
+  // === Lấy token BHYT với TTL từ server response ===
   async getBHYTToken() {
     while (this.bhytTokenLock) await new Promise(r => setTimeout(r, 100));
     
@@ -53,11 +53,23 @@ class HealthInsuranceExamService {
       const tokenRes = await this.safePost(url, { username, password });
       const apiKey = tokenRes.data.APIKey || {};
       
-      // Cache với TTL 30 phút
+      // Tính TTL từ expires_in của server hoặc fallback 15 phút
+      let expiresAt;
+      if (apiKey.expires_in) {
+        // Parse ISO string từ server: "2025-09-05T07:31:44.6200586Z"
+        expiresAt = new Date(apiKey.expires_in).getTime();
+        
+        // Safety buffer: Trừ đi 30 giây để tránh edge case
+        expiresAt -= (30 * 1000);
+      } else {
+        // Fallback: 15 phút nếu không có expires_in
+        expiresAt = Date.now() + (15 * 60 * 1000);
+      }
+      
       this.bhytTokenCache = { 
         token: apiKey.access_token || '', 
         id_token: apiKey.id_token || '',
-        expiresAt: Date.now() + (30 * 60 * 1000) // 30 minutes
+        expiresAt: expiresAt
       };
       
       return this.bhytTokenCache;
@@ -192,8 +204,6 @@ class HealthInsuranceExamService {
 
     // Logic tự động tìm slot trống cho receptionist - batch check
     let slot = null;
-    let attempts = 0;
-    const maxAttempts = 5; // Giảm số lần thử từ 10 xuống 5
     
     // Pre-check 5 slots cùng lúc để tối ưu
     const slotsToCheck = [];
