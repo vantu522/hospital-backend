@@ -2,12 +2,15 @@ import HealthInsuranceExam from '../../models/health-insurance-exam.model.js';
 
 const create = async (data) => HealthInsuranceExam.create(data);
 
-const findById = async (id) => HealthInsuranceExam.findById(id).lean(); // Use lean() for better performance
+const findById = async (id) => HealthInsuranceExam.findById(id); // Không dùng lean() để có thể .toObject()
 
-// Tìm max order number với projection để giảm data transfer
+// Tìm max order number chỉ trong các exam đã được accept
 const findMaxOrderNumber = async () => {
   const result = await HealthInsuranceExam.findOne(
-    {}, 
+    { 
+      status: 'accept', // Chỉ tìm trong records đã accept
+      order_number: { $ne: null } 
+    }, 
     { order_number: 1 }, 
     { sort: { order_number: -1 } }
   ).lean();
@@ -34,8 +37,13 @@ const findByDateRange = async (startDate, endDate, options = {}) => {
 // Atomic update cho order number và status
 const updateOrderNumber = async (id, orderNumber, status = 'accept') => {
   const updateData = { status };
-  if (orderNumber !== null) {
+  // Chỉ set order_number khi status = 'accept' và orderNumber không null
+  if (orderNumber !== null && status === 'accept') {
     updateData.order_number = orderNumber;
+  }
+  // Nếu status = 'reject' hoặc 'pending', giữ order_number = null
+  if (status !== 'accept') {
+    updateData.order_number = null;
   }
   return HealthInsuranceExam.findByIdAndUpdate(id, updateData, { new: true });
 };

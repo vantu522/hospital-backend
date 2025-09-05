@@ -271,7 +271,7 @@ class HealthInsuranceExamService {
     };
   }
 
-  // === Tạo lịch khám với parallel operations ===
+  // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
     const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.clinicRoom, data.role);
     
@@ -281,33 +281,20 @@ class HealthInsuranceExamService {
     data.slotId = slot._id;
     data.clinicRoom = slot.clinicRoom;
 
-    // Parallel operations cho performance
-    const promises = [];
-    
+    // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
-      // Promise để lấy max order number
-      promises.push(
-        healthInsuranceExamRepository.findMaxOrderNumber()
-          .then(maxOrder => {
-            data.order_number = maxOrder + 1;
-          })
-      );
+      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber();
+      data.order_number = maxOrder + 1;
     }
 
-    // Promise để tạo exam
-    promises.push(healthInsuranceExamRepository.create(data));
-    
-    // Promise để lấy clinic room info
-    promises.push(
+    // Parallel operations sau khi đã có order_number
+    const [exam, clinicRoomObj] = await Promise.all([
+      healthInsuranceExamRepository.create(data),
       (async () => {
         const ClinicRoom = (await import('../../models/clinic-room.model.js')).default;
         return ClinicRoom.findById(data.clinicRoom, 'name').lean();
       })()
-    );
-
-    const results = await Promise.all(promises);
-    const exam = results[data.status === 'accept' ? 1 : 0];
-    const clinicRoomObj = results[data.status === 'accept' ? 2 : 1];
+    ]);
 
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
     const qrImageBase64 = await QRCode.toDataURL(encodedId);
@@ -341,17 +328,16 @@ class HealthInsuranceExamService {
     }
 
     if (exam.status !== 'accept') {
-      // Parallel operations: get max order và update exam
-      const [maxOrder] = await Promise.all([
-        healthInsuranceExamRepository.findMaxOrderNumber(),
-        // Update exam status trước
-        healthInsuranceExamRepository.updateOrderNumber(exam._id, 0, 'accept') // Tạm thời set 0
-      ]);
+      // Lấy max order number trước
+      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber();
+      const newOrderNumber = maxOrder + 1;
       
-      // Update với order number thực tế
-      const updatedExam = await healthInsuranceExamRepository.updateOrderNumber(exam._id, maxOrder + 1, 'accept');
+      // Update exam với order number và status
+      const updatedExam = await healthInsuranceExamRepository.updateOrderNumber(exam._id, newOrderNumber, 'accept');
+      
+      // Cập nhật object exam để trả về đúng
       exam.status = 'accept';
-      exam.order_number = maxOrder + 1;
+      exam.order_number = newOrderNumber;
     }
 
     return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };
