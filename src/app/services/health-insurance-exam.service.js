@@ -5,8 +5,17 @@ import QRCode from 'qrcode';
 class HealthInsuranceExamService {
   // Lock để đồng bộ lấy token mới khi gặp lỗi 401
   bhytTokenLock = false;
-  // Cache token/id_token cho BHYT
-  bhytTokenCache = { token: null, id_token: null };
+  // Cache token/id_token cho BHYT với TTL
+  bhytTokenCache = { 
+    token: null, 
+    id_token: null, 
+    expiresAt: null 
+  };
+  // Cache template để giảm DB query
+  templatesCache = { 
+    data: null, 
+    expiresAt: null 
+  };
 
   // === Gọi API an toàn với retry cho lỗi mạng ===
   async safePost(url, body, options = {}, maxRetry = 3) {
@@ -27,20 +36,35 @@ class HealthInsuranceExamService {
     throw lastError;
   }
 
-  // === Lấy token BHYT, chỉ refresh khi cần ===
+  // === Lấy token BHYT với TTL cache (30 phút) ===
   async getBHYTToken() {
     while (this.bhytTokenLock) await new Promise(r => setTimeout(r, 100));
-    if (this.bhytTokenCache.token && this.bhytTokenCache.id_token) return this.bhytTokenCache;
+    
+    // Check TTL cache
+    if (this.bhytTokenCache.token && 
+        this.bhytTokenCache.id_token && 
+        this.bhytTokenCache.expiresAt > Date.now()) {
+      return this.bhytTokenCache;
+    }
 
     this.bhytTokenLock = true;
-    const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_TOKEN_URL: url } = process.env;
+    try {
+      const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_TOKEN_URL: url } = process.env;
 
-    const tokenRes = await this.safePost(url, { username, password });
-    const apiKey = tokenRes.data.APIKey || {};
-    this.bhytTokenCache = { token: apiKey.access_token || '', id_token: apiKey.id_token || '' };
-    this.bhytTokenLock = false;
-
-    return this.bhytTokenCache;
+      const tokenRes = await this.safePost(url, { username, password });
+      const apiKey = tokenRes.data.APIKey || {};
+      
+      // Cache với TTL 30 phút
+      this.bhytTokenCache = { 
+        token: apiKey.access_token || '', 
+        id_token: apiKey.id_token || '',
+        expiresAt: Date.now() + (30 * 60 * 1000) // 30 minutes
+      };
+      
+      return this.bhytTokenCache;
+    } finally {
+      this.bhytTokenLock = false;
+    }
   }
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
@@ -59,7 +83,7 @@ class HealthInsuranceExamService {
 
       if (response.data?.maKetQua === "401") {
         console.log('[BHYT] Token sai/hết hạn, lấy token mới...');
-        this.bhytTokenCache = { token: null, id_token: null };
+        this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
         ({ token, id_token } = await this.getBHYTToken());
         await new Promise(r => setTimeout(r, 1000));
         response = await requestAPI();
@@ -75,82 +99,170 @@ class HealthInsuranceExamService {
     }
   }
 
-  // === Tạo hoặc lấy slot gần nhất nếu cần ===
+  // === Cache templates với TTL để giảm DB query ===
+  async getTemplatesCache() {
+    if (this.templatesCache.data && this.templatesCache.expiresAt > Date.now()) {
+      return this.templatesCache.data;
+    }
+
+    const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
+    const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
+    
+    // Cache 5 phút
+    this.templatesCache = {
+      data: templates,
+      expiresAt: Date.now() + (5 * 60 * 1000)
+    };
+    
+    return templates;
+  }
+
+  // === Tạo hoặc lấy slot với logic tự động tìm slot tiếp theo cho receptionist ===
   async getOrCreateSlot(exam_date, exam_time, clinicRoom, role) {
     const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
     const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
     
-    let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true });
-    let adjustedTime = exam_time;
-    
-    // Nếu không tìm thấy template và là receptionist, tìm khung giờ tiếp theo
-    if (!template && role === 'receptionist') {
-      console.log('[Schedule] Tìm khung giờ tiếp theo cho:', exam_time);
-      const templates = await TimeSlotTemplate.find({ is_active: true }).lean();
-      
-      if (templates.length === 0) {
-        throw new Error('Không có khung giờ mẫu nào đang hoạt động');
-      }
-
+    // Hàm helper để tìm khung giờ tiếp theo
+    const findNextAvailableSlot = (currentTime, templates) => {
       const toMinutes = t => {
         const [h, m] = t.split(':').map(Number);
         return h * 60 + m;
       };
-      const target = toMinutes(exam_time);
+      const target = toMinutes(currentTime);
       
       // Tìm khung giờ tiếp theo (sau thời gian yêu cầu)
-      const nextSlots = templates
-        .filter(tpl => toMinutes(tpl.time) > target)
-        .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+      let nextSlot = null;
+      let minTimeDiff = Infinity;
       
-      console.log('[Schedule] Tìm khung giờ cho:', exam_time);
-      console.log('[Schedule] Các khung giờ sau thời gian yêu cầu:', nextSlots.map(t => t.time));
-
-      // Nếu không có khung giờ nào sau thời gian yêu cầu, lấy khung giờ đầu tiên của ngày hôm sau
-      if (nextSlots.length === 0) {
-        const firstSlot = templates.sort((a, b) => toMinutes(a.time) - toMinutes(b.time))[0];
-        template = firstSlot;
-        adjustedTime = template.time;
-        console.log('[Schedule] Không có khung giờ nào sau thời gian yêu cầu, chọn khung giờ đầu tiên:', adjustedTime);
-      } else {
-        template = nextSlots[0];
-        adjustedTime = template.time;
-        console.log('[Schedule] Đã điều chỉnh giờ khám thành khung giờ tiếp theo:', {
-          from: exam_time,
-          to: adjustedTime
-        });
+      for (const tpl of templates) {
+        const tplMinutes = toMinutes(tpl.time);
+        if (tplMinutes > target && (tplMinutes - target) < minTimeDiff) {
+          minTimeDiff = tplMinutes - target;
+          nextSlot = tpl;
+        }
       }
+      
+      // Nếu không có khung giờ nào sau, lấy khung giờ đầu tiên
+      if (!nextSlot) {
+        let earliestSlot = templates[0];
+        let earliestTime = toMinutes(templates[0].time);
+        
+        for (let i = 1; i < templates.length; i++) {
+          const currentTime = toMinutes(templates[i].time);
+          if (currentTime < earliestTime) {
+            earliestTime = currentTime;
+            earliestSlot = templates[i];
+          }
+        }
+        return earliestSlot;
+      }
+      
+      return nextSlot;
+    };
+
+    let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true }).lean();
+    let adjustedTime = exam_time;
+    
+    // Lấy cached templates để tái sử dụng và giảm DB load
+    const allTemplates = await this.getTemplatesCache();
+    
+    if (allTemplates.length === 0) {
+      throw new Error('Không có khung giờ mẫu nào đang hoạt động');
+    }
+
+    // Nếu không tìm thấy template và là receptionist, tìm khung giờ tiếp theo
+    if (!template && role === 'receptionist') {
+      const foundTemplate = findNextAvailableSlot(exam_time, allTemplates);
+      if (!foundTemplate) {
+        throw new Error('Không tìm thấy khung giờ mẫu nào phù hợp');
+      }
+      template = foundTemplate;
+      adjustedTime = template.time;
     } else if (!template) {
       throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
     }
 
-    // Tìm hoặc tạo slot với giờ đã điều chỉnh
-    let slot = await ScheduleSlot.findOne({ 
-      date: exam_date, 
-      timeSlot: adjustedTime, 
-      clinicRoom 
-    });
-
-    if (!slot) {
-      slot = await ScheduleSlot.create({
+    // Logic tự động tìm slot trống cho receptionist - batch check
+    let slot = null;
+    let attempts = 0;
+    const maxAttempts = 5; // Giảm số lần thử từ 10 xuống 5
+    
+    // Pre-check 5 slots cùng lúc để tối ưu
+    const slotsToCheck = [];
+    let currentTime = adjustedTime;
+    let currentTemplate = template;
+    
+    for (let i = 0; i < 5; i++) {
+      slotsToCheck.push({
         date: exam_date,
-        timeSlot: adjustedTime,
+        timeSlot: currentTime,
         clinicRoom,
-        capacity: template.capacity,
-        currentCount: 1,
-        is_active: true
+        template: currentTemplate
       });
-      console.log('[Schedule] Tạo slot mới:', {
-        date: exam_date,
-        time: adjustedTime,
-        capacity: template.capacity
-      });
-    } else {
-      if (slot.currentCount >= slot.capacity) {
+      
+      if (i < 4) { // Không cần tìm tiếp cho lần cuối
+        const nextTemplate = findNextAvailableSlot(currentTime, allTemplates);
+        if (!nextTemplate) break;
+        currentTime = nextTemplate.time;
+        currentTemplate = nextTemplate;
+      }
+    }
+    
+    // Batch query để check tất cả slots cùng lúc
+    const existingSlots = await ScheduleSlot.find({
+      date: exam_date,
+      timeSlot: { $in: slotsToCheck.map(s => s.timeSlot) },
+      clinicRoom
+    }).lean();
+    
+    // Tìm slot có thể sử dụng
+    for (const slotInfo of slotsToCheck) {
+      const existingSlot = existingSlots.find(s => s.timeSlot === slotInfo.timeSlot);
+      
+      // Nếu slot chưa tồn tại, tạo mới
+      if (!existingSlot) {
+        try {
+          slot = await ScheduleSlot.create({
+            date: exam_date,
+            timeSlot: slotInfo.timeSlot,
+            clinicRoom,
+            capacity: slotInfo.template.capacity,
+            currentCount: 1,
+            is_active: true
+          });
+          adjustedTime = slotInfo.timeSlot;
+          break;
+        } catch (err) {
+          // Nếu có duplicate key error, tiếp tục với slot tiếp theo
+          if (err.code === 11000) continue;
+          throw err;
+        }
+      }
+      
+      // Nếu slot còn chỗ trống
+      if (existingSlot.currentCount < existingSlot.capacity) {
+        // Atomic update để tránh race condition
+        const updatedSlot = await ScheduleSlot.findByIdAndUpdate(
+          existingSlot._id,
+          { $inc: { currentCount: 1 } },
+          { new: true }
+        );
+        
+        if (updatedSlot && updatedSlot.currentCount <= updatedSlot.capacity) {
+          slot = updatedSlot;
+          adjustedTime = slotInfo.timeSlot;
+          break;
+        }
+      }
+      
+      // Slot đầy - nếu không phải receptionist thì báo lỗi ngay
+      if (role !== 'receptionist') {
         throw new Error('Slot đã đầy, vui lòng chọn khung giờ khác');
       }
-      slot.currentCount += 1;
-      await slot.save();
+    }
+    
+    if (!slot) {
+      throw new Error('Không tìm thấy khung giờ trống nào trong ngày');
     }
 
     return {
@@ -159,7 +271,7 @@ class HealthInsuranceExamService {
     };
   }
 
-  // === Tạo lịch khám ===
+  // === Tạo lịch khám với parallel operations ===
   async createExam(data) {
     const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.clinicRoom, data.role);
     
@@ -169,15 +281,33 @@ class HealthInsuranceExamService {
     data.slotId = slot._id;
     data.clinicRoom = slot.clinicRoom;
 
+    // Parallel operations cho performance
+    const promises = [];
+    
     if (data.status === 'accept') {
-      const HealthInsuranceExam = (await import('../../models/health-insurance-exam.model.js')).default;
-      const maxOrder = await HealthInsuranceExam.findOne({}, {}, { sort: { order_number: -1 } });
-      data.order_number = maxOrder?.order_number ? maxOrder.order_number+1 : 1;
+      // Promise để lấy max order number
+      promises.push(
+        healthInsuranceExamRepository.findMaxOrderNumber()
+          .then(maxOrder => {
+            data.order_number = maxOrder + 1;
+          })
+      );
     }
 
-    const exam = await healthInsuranceExamRepository.create(data);
-    const ClinicRoom = (await import('../../models/clinic-room.model.js')).default;
-    const clinicRoomObj = await ClinicRoom.findById(exam.clinicRoom).lean();
+    // Promise để tạo exam
+    promises.push(healthInsuranceExamRepository.create(data));
+    
+    // Promise để lấy clinic room info
+    promises.push(
+      (async () => {
+        const ClinicRoom = (await import('../../models/clinic-room.model.js')).default;
+        return ClinicRoom.findById(data.clinicRoom, 'name').lean();
+      })()
+    );
+
+    const results = await Promise.all(promises);
+    const exam = results[data.status === 'accept' ? 1 : 0];
+    const clinicRoomObj = results[data.status === 'accept' ? 2 : 1];
 
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
     const qrImageBase64 = await QRCode.toDataURL(encodedId);
@@ -189,7 +319,7 @@ class HealthInsuranceExamService {
     };
   }
 
-  // === Check lịch khám theo QR code ===
+  // === Check lịch khám theo QR code với parallel operations ===
   async checkExamByEncodedId(encodedId) {
     let id;
     try { id = Buffer.from(encodedId, 'base64').toString('utf-8'); } 
@@ -205,16 +335,23 @@ class HealthInsuranceExamService {
     if (now < examDateTime) return { valid: false, message: 'Chưa tới giờ khám', exam };
 
     if ((now - examDateTime)/(1000*60) > 15) {
-      exam.status = 'reject'; await exam.save();
+      // Atomic update để reject exam
+      await healthInsuranceExamRepository.updateOrderNumber(exam._id, null, 'reject');
       return { valid: false, message: 'Lịch khám bị hủy do tới trễ quá 15 phút', exam };
     }
 
     if (exam.status !== 'accept') {
+      // Parallel operations: get max order và update exam
+      const [maxOrder] = await Promise.all([
+        healthInsuranceExamRepository.findMaxOrderNumber(),
+        // Update exam status trước
+        healthInsuranceExamRepository.updateOrderNumber(exam._id, 0, 'accept') // Tạm thời set 0
+      ]);
+      
+      // Update với order number thực tế
+      const updatedExam = await healthInsuranceExamRepository.updateOrderNumber(exam._id, maxOrder + 1, 'accept');
       exam.status = 'accept';
-      const HealthInsuranceExam = (await import('../models/health-insurance-exam.model.js')).default;
-      const maxOrder = await HealthInsuranceExam.findOne({}, {}, { sort: { order_number: -1 } });
-      exam.order_number = maxOrder?.order_number ? maxOrder.order_number+1 : 1;
-      await exam.save();
+      exam.order_number = maxOrder + 1;
     }
 
     return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };

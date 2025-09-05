@@ -29,4 +29,11 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   order_number: { type: Number, default: null },
 }, { timestamps: true });
 
+// Performance indexes
+HealthInsuranceExamSchema.index({ order_number: -1 }); // Cho việc tìm max order
+HealthInsuranceExamSchema.index({ exam_date: 1, status: 1 }); // Cho search theo ngày và status
+HealthInsuranceExamSchema.index({ clinicRoom: 1, exam_date: 1 }); // Cho filter theo phòng khám
+HealthInsuranceExamSchema.index({ health_insurance_number: 1 }); // Cho check BHYT
+HealthInsuranceExamSchema.index({ citizen_id: 1 }); // Cho search theo CCCD
+
 export default mongoose.model('HealthInsuranceExam', HealthInsuranceExamSchema);
