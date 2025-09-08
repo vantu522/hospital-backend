@@ -10,9 +10,9 @@ const validateInsuranceExam = (req, res, next) => {
   if (data.phone_number && data.phone_number.trim() && !/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(data.phone_number)) {
     errors.push('Số điện thoại không đúng định dạng Việt Nam');
   }
-  if (!data.citizen_id || !data.citizen_id.trim()) {
-    errors.push('CMND/CCCD không được để trống');
-  }
+  // if (!data.citizen_id || !data.citizen_id.trim()) {
+  //   errors.push('CMND/CCCD không được để trống');
+  // }
   if (!data.date_of_birth || !data.date_of_birth.trim()) {
     errors.push('Ngày sinh không được để trống');
   }
