@@ -31,14 +31,6 @@ export const validateCreatePhongKham = [
     .withMessage('Tên phòng khám phải có độ dài từ 1-255 ký tự')
     .trim(),
 
-  body('dia_chi')
-    .notEmpty()
-    .withMessage('Địa chỉ là bắt buộc')
-    .isString()
-    .withMessage('Địa chỉ phải là chuỗi')
-    .isLength({ min: 1, max: 500 })
-    .withMessage('Địa chỉ phải có độ dài từ 1-500 ký tự')
-    .trim(),
 
   body('cap_quan_li')
     .optional()

@@ -20,7 +20,7 @@ const phongKhamSchema = new mongoose.Schema(
     },
     dia_chi: {
       type: String,
-      required: true,
+      
       trim: true
     },
     cap_quan_li: {
