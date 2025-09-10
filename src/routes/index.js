@@ -14,6 +14,9 @@ import applicationRouter from "./application.router.js";
 import backgroundBannerRouter from "./background-banner.router.js";
 import healthInsuranceExamRouter from "./health-insurance-exam.router.js";
 import customerRouter from "./customer.router.js";
+import loaiKhamRouter from "./loai-kham.router.js";
+import khoaKhamRouter from "./khoa-kham.router.js";
+import phongKhamRouter from "./phong-kham.router.js";
 
 function route(app){
     app.use('/api/users', userRouter)
@@ -32,6 +35,9 @@ function route(app){
     app.use('/api/customers', customerRouter);
     app.use('/api/clinic-rooms', clinicRoomRouter);
     app.use('/api/time-slot-templates', timeSlotTemplateRouter);
+    app.use('/api/loai-kham', loaiKhamRouter);
+    app.use('/api/khoa-kham', khoaKhamRouter);
+    app.use('/api/phong-kham', phongKhamRouter);
 }
 
 export default route;

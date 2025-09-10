@@ -43,6 +43,46 @@ const options = {
             updatedAt: { type: 'string', format: 'date-time' }
           }
         },
+        LoaiKham: {
+          type: 'object',
+          required: ['_id', 'ma', 'ten'],
+          properties: {
+            _id: { type: 'string', description: 'Mã loại khám' },
+            ma: { type: 'string', description: 'Mã loại khám (uppercase)' },
+            ten: { type: 'string', description: 'Tên loại khám' },
+            is_active: { type: 'boolean', default: true, description: 'Trạng thái hoạt động' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        KhoaKham: {
+          type: 'object',
+          required: ['_id', 'ma', 'ten', 'dia_chi', 'cap_quan_li'],
+          properties: {
+            _id: { type: 'string', description: 'Mã khoa khám' },
+            ma: { type: 'string', description: 'Mã khoa khám (uppercase)' },
+            ten: { type: 'string', description: 'Tên khoa khám' },
+            dia_chi: { type: 'string', description: 'Địa chỉ khoa khám' },
+            cap_quan_li: { type: 'string', description: 'Cấp quản lí khoa khám' },
+            is_active: { type: 'boolean', default: true, description: 'Trạng thái hoạt động' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        PhongKham: {
+          type: 'object',
+          required: ['_id', 'ma', 'ten', 'dia_chi'],
+          properties: {
+            _id: { type: 'string', description: 'Mã phòng khám' },
+            ma: { type: 'string', description: 'Mã phòng khám (uppercase)' },
+            ten: { type: 'string', description: 'Tên phòng khám' },
+            dia_chi: { type: 'string', description: 'Địa chỉ phòng khám' },
+            cap_quan_li: { type: 'string', default: 'Phòng', description: 'Cấp quản lí phòng khám' },
+            is_active: { type: 'boolean', default: true, description: 'Trạng thái hoạt động' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         HealthInsuranceExam: {
           type: 'object',
           required: [
