@@ -4,6 +4,7 @@ import upload from "../app/middlewares/upload.js";
 
 const informationRouter = Router();
 
+informationRouter.get('/main',informationController.getMainInformation);
 informationRouter.get('/',informationController.getAllInformation);
 informationRouter.put('/:id',informationController.updateInformation); 
 informationRouter.post('/',informationController.createInformation);    
