@@ -1,7 +1,46 @@
 import khoaKhamService from '../services/khoa-kham.service.js';
 
 class KhoaKhamController {
-  // Lấy tất cả khoa khám
+  /**
+   * @swagger
+   * /api/khoa-kham:
+   *   get:
+   *     tags: [KhoaKham]
+   *     summary: Lấy danh sách khoa khám
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - name: page
+   *         in: query
+   *         description: Số trang
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - name: limit
+   *         in: query
+   *         description: Số lượng mỗi trang
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 10
+   *     responses:
+   *       200:
+   *         description: Thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KhoaKham'
+   */
   async getAll(req, res) {
     try {
       const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;

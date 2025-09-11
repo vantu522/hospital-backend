@@ -40,5 +40,7 @@ router.post('/cong-kham',  upload.single('file'), importController.importCongKha
 // Routes cho download template (chỉ admin/superadmin)
 router.get('/khoa-kham/template', requireAdminOrSuperadmin, importController.downloadKhoaKhamTemplate);
 router.get('/phong-kham/template', requireAdminOrSuperadmin, importController.downloadPhongKhamTemplate);
+router.get('/loai-kham/template', requireAdminOrSuperadmin, importController.downloadLoaiKhamTemplate);
+router.get('/cong-kham/template', requireAdminOrSuperadmin, importController.downloadCongKhamTemplate);
 
 export default router;

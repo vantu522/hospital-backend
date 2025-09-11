@@ -4,8 +4,53 @@ import KhoaKham from '../../models/khoa-kham.model.js';
 import PhongKham from '../../models/phong-kham.model.js';
 import LoaiKham from '../../models/loai-kham.model.js';
 import CongKham from '../../models/cong-kham.model.js';
+
 class ImportController {
-  // Import KhoaKham từ Excel
+  /**
+   * @swagger
+   * /api/import/khoa-kham:
+   *   post:
+   *     tags: [Import]
+   *     summary: Import dữ liệu khoa khám từ file Excel
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: File Excel (.xlsx hoặc .xls)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Import thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Import KhoaKham thành công
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalImported:
+   *                       type: integer
+   *                     records:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KhoaKham'
+   */
   async importKhoaKham(req, res) {
     try {
       if (!req.file) {
@@ -78,7 +123,51 @@ class ImportController {
     }
   }
 
-  // Import PhongKham từ Excel
+  /**
+   * @swagger
+   * /api/import/phong-kham:
+   *   post:
+   *     tags: [Import]
+   *     summary: Import dữ liệu phòng khám từ file Excel
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: File Excel (.xlsx hoặc .xls)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Import thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Import PhongKham thành công
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalImported:
+   *                       type: integer
+   *                     records:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/PhongKham'
+   */
   async importPhongKham(req, res) {
     try {
       if (!req.file) {
@@ -151,7 +240,51 @@ class ImportController {
     }
   }
 
-  // Import LoaiKham từ Excel (chỉ lấy 3 cột đầu: ID, Mã, Tên)
+  /**
+   * @swagger
+   * /api/import/loai-kham:
+   *   post:
+   *     tags: [Import]
+   *     summary: Import dữ liệu loại khám từ file Excel
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: File Excel (.xlsx hoặc .xls)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Import thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Import LoaiKham thành công
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalImported:
+   *                       type: integer
+   *                     records:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/LoaiKham'
+   */
   async importLoaiKham(req, res) {
     try {
       if (!req.file) {
@@ -219,6 +352,52 @@ class ImportController {
       });
     }
   }
+
+  /**
+   * @swagger
+   * /api/import/cong-kham:
+   *   post:
+   *     tags: [Import]
+   *     summary: Import dữ liệu cổng khám từ file Excel
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: File Excel (.xlsx hoặc .xls)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Import thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Import CongKham thành công
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalImported:
+   *                       type: integer
+   *                     records:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/CongKham'
+   */
   async importCongKham(req, res) {
     try {
       if (!req.file) {
@@ -297,7 +476,23 @@ class ImportController {
     }
   }
 
-  // Download template cho KhoaKham
+  /**
+   * @swagger
+   * /api/import/khoa-kham/template:
+   *   get:
+   *     tags: [Import]
+   *     summary: Tải template Excel cho khoa khám
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: File template
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   */
   async downloadKhoaKhamTemplate(req, res) {
     try {
       const templateData = [
@@ -328,7 +523,23 @@ class ImportController {
     }
   }
 
-  // Download template cho PhongKham
+  /**
+   * @swagger
+   * /api/import/phong-kham/template:
+   *   get:
+   *     tags: [Import]
+   *     summary: Tải template Excel cho phòng khám
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: File template
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   */
   async downloadPhongKhamTemplate(req, res) {
     try {
       const templateData = [
@@ -355,6 +566,98 @@ class ImportController {
       return res.status(500).json({
         success: false,
         message: 'Lỗi tải template PhongKham'
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/import/loai-kham/template:
+   *   get:
+   *     tags: [Import]
+   *     summary: Tải template Excel cho loại khám
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: File template
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   */
+  async downloadLoaiKhamTemplate(req, res) {
+    try {
+      const templateData = [
+        {
+          "ID": "LK001",
+          "Mã": "KBCB",
+          "Tên": "Khám bệnh chữa bệnh"
+        }
+      ];
+
+      const ws = xlsx.utils.json_to_sheet(templateData);
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, "LoaiKham");
+
+      const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Disposition', 'attachment; filename=template-loai-kham.xlsx');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Download LoaiKham template error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi tải template LoaiKham'
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/import/cong-kham/template:
+   *   get:
+   *     tags: [Import]
+   *     summary: Tải template Excel cho cổng khám
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: File template
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   */
+  async downloadCongKhamTemplate(req, res) {
+    try {
+      const templateData = [
+        {
+          "Id": "CK001",
+          "Mã BV": "C01",
+          "Mã BHYT": "BH01", 
+          "Tên BV": "Cổng khám số 1",
+          "Tên BHYT": "Cổng BHYT 1"
+        }
+      ];
+
+      const ws = xlsx.utils.json_to_sheet(templateData);
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, "CongKham");
+
+      const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Disposition', 'attachment; filename=template-cong-kham.xlsx');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Download CongKham template error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi tải template CongKham'
       });
     }
   }
