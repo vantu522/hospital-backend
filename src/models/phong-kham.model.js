@@ -35,12 +35,12 @@ const phongKhamSchema = new mongoose.Schema(
     }
     ,
     // Mã loại khám
-    loai_kham: {
+    IdLoaiKham: {
       type: String,
       required: true,
     },
     // Mã khoa khám
-    khoa_kham: {
+    IdKhoaKham: {
       type: String,
       required: true,
     }
