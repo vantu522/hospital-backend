@@ -33,6 +33,17 @@ const phongKhamSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     }
+    ,
+    // Mã loại khám
+    loai_kham: {
+      type: String,
+      required: true,
+    },
+    // Mã khoa khám
+    khoa_kham: {
+      type: String,
+      required: true,
+    }
   },
   {
     timestamps: true,
@@ -46,6 +57,8 @@ phongKhamSchema.index({ _id: 1 });
 phongKhamSchema.index({ ma: 1 });
 phongKhamSchema.index({ is_active: 1 });
 phongKhamSchema.index({ cap_quan_li: 1 });
+phongKhamSchema.index({ loai_kham: 1 });
+phongKhamSchema.index({ khoa_kham: 1 });
 
 const PhongKham = mongoose.model('PhongKham', phongKhamSchema);
 
