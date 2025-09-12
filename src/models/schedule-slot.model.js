@@ -9,11 +9,11 @@ const ScheduleSlotSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  clinicRoom: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'ClinicRoom',
-      required: true,
-    },
+  phongKham: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PhongKham',
+        required: true,
+      },
   capacity: {
     type: Number,
     required: true,
@@ -30,10 +30,11 @@ const ScheduleSlotSchema = new mongoose.Schema({
   timestamps: true
 });
 
+
 // Performance indexes
-ScheduleSlotSchema.index({ date: 1, timeSlot: 1, clinicRoom: 1 }, { unique: true }); // Compound index cho tìm slot
+ScheduleSlotSchema.index({ date: 1, timeSlot: 1, phongKham: 1 }, { unique: true }); // Compound index cho tìm slot
 ScheduleSlotSchema.index({ date: 1, is_active: 1 }); // Cho search available slots
-ScheduleSlotSchema.index({ clinicRoom: 1, date: 1 }); // Cho filter theo phòng khám
+ScheduleSlotSchema.index({ phongKham: 1, date: 1 }); // Cho filter theo phòng khám
 
 const ScheduleSlot = mongoose.model('ScheduleSlot', ScheduleSlotSchema);
 

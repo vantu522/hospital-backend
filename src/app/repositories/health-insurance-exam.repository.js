@@ -5,13 +5,21 @@ const create = async (data) => HealthInsuranceExam.create(data);
 const findById = async (id) => HealthInsuranceExam.findById(id); // Không dùng lean() để có thể .toObject()
 
 // Tìm max order number chỉ trong các exam đã được accept
-const findMaxOrderNumber = async () => {
+
+// Tìm max order number theo ngày (không phân biệt phòng)
+const findMaxOrderNumber = async (exam_date) => {
+  // Chỉ lấy records đã accept, cùng ngày
+  const startOfDay = new Date(exam_date);
+  startOfDay.setHours(0,0,0,0);
+  const endOfDay = new Date(exam_date);
+  endOfDay.setHours(23,59,59,999);
   const result = await HealthInsuranceExam.findOne(
-    { 
-      status: 'accept', // Chỉ tìm trong records đã accept
-      order_number: { $ne: null } 
-    }, 
-    { order_number: 1 }, 
+    {
+      status: 'accept',
+      order_number: { $ne: null },
+      exam_date: { $gte: startOfDay, $lte: endOfDay }
+    },
+    { order_number: 1 },
     { sort: { order_number: -1 } }
   ).lean();
   return result?.order_number || 0;

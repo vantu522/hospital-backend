@@ -139,11 +139,11 @@ class HealthInsuranceExamService {
 
   // === Tạo hoặc lấy slot với logic tự động tìm slot tiếp theo cho receptionist ===
   async getOrCreateSlot(exam_date, exam_time, clinicRoom, role) {
-    const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
-    const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
-    
-    // Hàm helper để tìm khung giờ tiếp theo
-    const findNextAvailableSlot = (currentTime, templates) => {
+  const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
+  const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
+
+  // Hàm helper để tìm khung giờ tiếp theo
+  const findNextAvailableSlot = (currentTime, templates) => {
       const toMinutes = t => {
         const [h, m] = t.split(':').map(Number);
         return h * 60 + m;
@@ -170,12 +170,13 @@ class HealthInsuranceExamService {
       return nextSlot;
     };
 
+
     let template = await TimeSlotTemplate.findOne({ time: exam_time, is_active: true }).lean();
     let adjustedTime = exam_time;
-    
+
     // Lấy cached templates để tái sử dụng và giảm DB load
     const allTemplates = await this.getTemplatesCache();
-    
+
     if (allTemplates.length === 0) {
       throw new Error('Không có khung giờ mẫu nào đang hoạt động');
     }
@@ -198,46 +199,46 @@ class HealthInsuranceExamService {
 
     // Logic tự động tìm slot trống cho receptionist - batch check
     let slot = null;
-    
+
     // Pre-check 5 slots cùng lúc để tối ưu
     const slotsToCheck = [];
     let currentTime = adjustedTime;
     let currentTemplate = template;
-    
+
     for (let i = 0; i < 5; i++) {
       slotsToCheck.push({
         date: exam_date,
         timeSlot: currentTime,
-        clinicRoom,
+        phongKham: clinicRoom, // clinicRoom param now is phongKham string _id
         template: currentTemplate
       });
-      
-      if (i < 4) { // Không cần tìm tiếp cho lần cuối
+
+      if (i < 4) {
         const nextTemplate = findNextAvailableSlot(currentTime, allTemplates);
         if (!nextTemplate) break;
         currentTime = nextTemplate.time;
         currentTemplate = nextTemplate;
       }
     }
-    
+
     // Batch query để check tất cả slots cùng lúc
     const existingSlots = await ScheduleSlot.find({
       date: exam_date,
       timeSlot: { $in: slotsToCheck.map(s => s.timeSlot) },
-      clinicRoom
+      phongKham: clinicRoom // clinicRoom param now is phongKham string _id
     }).lean();
-    
+
     // Tìm slot có thể sử dụng
     for (const slotInfo of slotsToCheck) {
       const existingSlot = existingSlots.find(s => s.timeSlot === slotInfo.timeSlot);
-      
+
       // Nếu slot chưa tồn tại, tạo mới
       if (!existingSlot) {
         try {
           slot = await ScheduleSlot.create({
             date: exam_date,
             timeSlot: slotInfo.timeSlot,
-            clinicRoom,
+            phongKham: slotInfo.phongKham,
             capacity: slotInfo.template.capacity,
             currentCount: 1,
             is_active: true
@@ -245,34 +246,31 @@ class HealthInsuranceExamService {
           adjustedTime = slotInfo.timeSlot;
           break;
         } catch (err) {
-          // Nếu có duplicate key error, tiếp tục với slot tiếp theo
           if (err.code === 11000) continue;
           throw err;
         }
       }
-      
+
       // Nếu slot còn chỗ trống
       if (existingSlot.currentCount < existingSlot.capacity) {
-        // Atomic update để tránh race condition
         const updatedSlot = await ScheduleSlot.findByIdAndUpdate(
           existingSlot._id,
           { $inc: { currentCount: 1 } },
           { new: true }
         );
-        
+
         if (updatedSlot && updatedSlot.currentCount <= updatedSlot.capacity) {
           slot = updatedSlot;
           adjustedTime = slotInfo.timeSlot;
           break;
         }
       }
-      
-      // Slot đầy - nếu không phải receptionist thì báo lỗi ngay
+
       if (role !== 'receptionist') {
         throw new Error('Slot đã đầy, vui lòng chọn khung giờ khác');
       }
     }
-    
+
     if (!slot) {
       throw new Error('Không tìm thấy khung giờ trống nào trong ngày');
     }
@@ -285,17 +283,19 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.clinicRoom, data.role);
-    
+
+    // Sử dụng phongKham cho slot và queue logic
+    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.phongKham, data.role);
+
     // Cập nhật lại giờ khám nếu có điều chỉnh
     data.exam_time = adjustedTime;
     data.status = data.role === 'receptionist' ? 'accept' : 'pending';
     data.slotId = slot._id;
-    data.clinicRoom = slot.clinicRoom;
+    data.phongKham = slot.phongKham;
 
     // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
-      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber();
+      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber(data.exam_date);
       data.order_number = maxOrder + 1;
     }
 
