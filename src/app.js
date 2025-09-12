@@ -6,7 +6,11 @@ import { swaggerUi, specs } from './config/swagger.js';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "*",                  // Mở full cho tất cả domains
+  credentials: false,
+  optionsSuccessStatus: 200
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 // Cho phép truy cập file upload

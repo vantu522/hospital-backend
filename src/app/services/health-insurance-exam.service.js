@@ -162,19 +162,9 @@ class HealthInsuranceExamService {
         }
       }
       
-      // Nếu không có khung giờ nào sau, lấy khung giờ đầu tiên
+      // ✅ Chỉ tìm khung giờ sau thời gian yêu cầu, không fallback về đầu
       if (!nextSlot) {
-        let earliestSlot = templates[0];
-        let earliestTime = toMinutes(templates[0].time);
-        
-        for (let i = 1; i < templates.length; i++) {
-          const currentTime = toMinutes(templates[i].time);
-          if (currentTime < earliestTime) {
-            earliestTime = currentTime;
-            earliestSlot = templates[i];
-          }
-        }
-        return earliestSlot;
+        return null; // Không tìm thấy khung giờ nào phù hợp
       }
       
       return nextSlot;
@@ -190,16 +180,20 @@ class HealthInsuranceExamService {
       throw new Error('Không có khung giờ mẫu nào đang hoạt động');
     }
 
-    // Nếu không tìm thấy template và là receptionist, tìm khung giờ tiếp theo
-    if (!template && role === 'receptionist') {
-      const foundTemplate = findNextAvailableSlot(exam_time, allTemplates);
-      if (!foundTemplate) {
-        throw new Error('Không tìm thấy khung giờ mẫu nào phù hợp');
+    // ✅ Logic xử lý theo role
+    if (!template) {
+      if (role === 'receptionist') {
+        // Receptionist: Tự động tìm khung giờ tiếp theo
+        const foundTemplate = findNextAvailableSlot(exam_time, allTemplates);
+        if (!foundTemplate) {
+          throw new Error('Không tìm thấy khung giờ mẫu nào phù hợp');
+        }
+        template = foundTemplate;
+        adjustedTime = template.time;
+      } else {
+        // User: Báo lỗi nếu không có khung giờ mẫu chính xác
+        throw new Error(`Khung giờ ${exam_time} không có trong lịch khám. Vui lòng chọn khung giờ khác.`);
       }
-      template = foundTemplate;
-      adjustedTime = template.time;
-    } else if (!template) {
-      throw new Error('Không tìm thấy khung giờ mẫu phù hợp');
     }
 
     // Logic tự động tìm slot trống cho receptionist - batch check
