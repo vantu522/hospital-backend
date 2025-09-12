@@ -9,7 +9,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   gender: { type: String, required: true, enum: ['Nam', 'Nữ', 'Khác'] },
   address: { type: String, required: true, trim: true },
   health_insurance_number: { type: String, trim: true }, // BHYT 
-  clinicRoom: { type: mongoose.Schema.Types.ObjectId, ref: 'ClinicRoom', required: true },
+  phongKham: { type: mongoose.Schema.Types.ObjectId, ref: 'PhongKham', required: true },
   exam_type: {
     type: String,
     enum: ['BHYT', 'DV'],
@@ -32,7 +32,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
 // Performance indexes
 HealthInsuranceExamSchema.index({ order_number: -1 }); // Cho việc tìm max order
 HealthInsuranceExamSchema.index({ exam_date: 1, status: 1 }); // Cho search theo ngày và status
-HealthInsuranceExamSchema.index({ clinicRoom: 1, exam_date: 1 }); // Cho filter theo phòng khám
+HealthInsuranceExamSchema.index({ phongKham: 1, exam_date: 1 }); // Cho filter theo phòng khám
 HealthInsuranceExamSchema.index({ health_insurance_number: 1 }); // Cho check BHYT
 HealthInsuranceExamSchema.index({ citizen_id: 1 }); // Cho search theo CCCD
 

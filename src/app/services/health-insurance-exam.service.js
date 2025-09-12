@@ -3,6 +3,29 @@ import axios from 'axios';
 import QRCode from 'qrcode';
 
 class HealthInsuranceExamService {
+  // Cache kết quả check BHYT thành công (key: maThe)
+  bhytResultCache = {};
+
+  // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
+  convertBHYTToThirdParty(bhytData) {
+    return {
+      "Domain": "01821",
+      SoBHYT: bhytData.maThe,
+      HoVaTen: bhytData.hoTen,
+      NgaySinh: bhytData.ngaySinh,
+      GioiTinh: bhytData.gioiTinh === 'Nam',
+      DiaChi: bhytData.diaChi,
+      NoiDKBD: bhytData.maDKBD,
+      TenBenhVienDKBD: bhytData.tenDKBDMoi || '',
+      NgayDangKy: bhytData.gtTheTu,
+      NgayHieuLuc: bhytData.gtTheTu,
+      NgayHetHan: bhytData.gtTheDen,
+      IsBHYT5Nam: !!bhytData.ngayDu5Nam,
+      NgayDu5Nam: bhytData.ngayDu5Nam,
+      MaSoBHXH: bhytData.maSoBHXH,
+      IsMaTheMoi: !!bhytData.maTheMoi,
+    };
+  }
   // Lock để đồng bộ lấy token mới khi gặp lỗi 401
   bhytTokenLock = false;
   // Cache token/id_token cho BHYT với TTL
@@ -105,7 +128,10 @@ class HealthInsuranceExamService {
 
       // Chỉ có maKetQua = "000" là thành công, tất cả các mã khác đều là lỗi
       if (response.data?.maKetQua === "000") {
-        return { success: true, data: response.data };
+        // Cache kết quả convert cho maThe
+        const converted = this.convertBHYTToThirdParty(response.data);
+        this.bhytResultCache[maThe] = converted;
+        return { success: true, data: response.data, converted };
       } else {
         return { 
           success: false, 
