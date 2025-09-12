@@ -23,7 +23,7 @@ const validateInsuranceExam = (req, res, next) => {
     errors.push('Địa chỉ không được để trống');
   }
   // Số BHYT có thể để trống, không cần validate nếu trống
-  if (!data.clinicRoom || !data.clinicRoom.trim()) {
+  if (!data.phongKham || !data.phongKham.trim()) {
     errors.push('Phòng khám không được để trống');
   }
   if (!data.exam_date || !data.exam_date.trim()) {
