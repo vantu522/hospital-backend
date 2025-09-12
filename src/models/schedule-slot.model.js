@@ -10,7 +10,7 @@ const ScheduleSlotSchema = new mongoose.Schema({
     required: true,
   },
   phongKham: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         ref: 'PhongKham',
         required: true,
       },
