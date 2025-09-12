@@ -1,6 +1,229 @@
 import phongKhamService from '../services/phong-kham.service.js';
 
 class PhongKhamController {
+  /**
+   * @swagger
+   * /api/phong-kham:
+   *   get:
+   *     tags: [PhongKham]
+   *     summary: Lấy danh sách phòng khám
+   *     parameters:
+   *       - name: page
+   *         in: query
+   *         description: Số trang
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - name: limit
+   *         in: query
+   *         description: Số lượng mỗi trang
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 10
+   *     responses:
+   *       200:
+   *         description: Thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PhongKham'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     currentPage:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
+   *                     totalItems:
+   *                       type: integer
+   *                     itemsPerPage:
+   *                       type: integer
+   */
+  /**
+   * @swagger
+   * /api/phong-kham/active:
+   *   get:
+   *     tags: [PhongKham]
+   *     summary: Lấy danh sách phòng khám đang hoạt động
+   *     responses:
+   *       200:
+   *         description: Thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PhongKham'
+   */
+  /**
+   * @swagger
+   * /api/phong-kham/{id}:
+   *   get:
+   *     tags: [PhongKham]
+   *     summary: Lấy thông tin phòng khám theo ID
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: ID phòng khám
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   $ref: '#/components/schemas/PhongKham'
+   */
+  /**
+   * @swagger
+   * /api/phong-kham:
+   *   post:
+   *     tags: [PhongKham]
+   *     summary: Tạo phòng khám mới
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/PhongKham'
+   *     responses:
+   *       201:
+   *         description: Tạo thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   $ref: '#/components/schemas/PhongKham'
+   *                 message:
+   *                   type: string
+   *                   example: Tạo phòng khám thành công
+   */
+  /**
+   * @swagger
+   * /api/phong-kham/{id}:
+   *   put:
+   *     tags: [PhongKham]
+   *     summary: Cập nhật phòng khám
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: ID phòng khám
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/PhongKham'
+   *     responses:
+   *       200:
+   *         description: Cập nhật thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   $ref: '#/components/schemas/PhongKham'
+   *                 message:
+   *                   type: string
+   *                   example: Cập nhật phòng khám thành công
+   */
+  /**
+   * @swagger
+   * /api/phong-kham/{id}:
+   *   delete:
+   *     tags: [PhongKham]
+   *     summary: Xóa mềm phòng khám
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: ID phòng khám
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Xóa thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   $ref: '#/components/schemas/PhongKham'
+   *                 message:
+   *                   type: string
+   *                   example: Xóa phòng khám thành công
+   */
+  /**
+   * @swagger
+   * /api/phong-kham/{id}/restore:
+   *   patch:
+   *     tags: [PhongKham]
+   *     summary: Khôi phục phòng khám
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: ID phòng khám
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Khôi phục thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   $ref: '#/components/schemas/PhongKham'
+   *                 message:
+   *                   type: string
+   *                   example: Khôi phục phòng khám thành công
+   */
   // Lấy tất cả phòng khám
   async getAll(req, res) {
     try {
