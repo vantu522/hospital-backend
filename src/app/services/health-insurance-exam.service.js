@@ -326,22 +326,26 @@ class HealthInsuranceExamService {
     }
 
     // Parallel operations sau khi đã có order_number
-    const [exam, clinicRoomObj] = await Promise.all([
-      healthInsuranceExamRepository.create(data),
-      (async () => {
-        const ClinicRoom = (await import('../../models/clinic-room.model.js')).default;
-        return ClinicRoom.findById(data.clinicRoom, 'name').lean();
-      })()
-    ]);
+      const [exam, phongKhamObj] = await Promise.all([
+        healthInsuranceExamRepository.create(data),
+        (async () => {
+          const PhongKham = (await import('../../models/phong-kham.model.js')).default;
+          return PhongKham.findOne({ _id: data.phongKham }, 'ten').lean();
+        })()
+      ]);
 
-    const encodedId = Buffer.from(exam._id.toString()).toString('base64');
-    const qrImageBase64 = await QRCode.toDataURL(encodedId);
+      const encodedId = Buffer.from(exam._id.toString()).toString('base64');
+      const qrImageBase64 = await QRCode.toDataURL(encodedId);
 
-    return {
-      exam: { ...exam.toObject(), clinicRoom: clinicRoomObj?.name || '' },
-      qr_code: qrImageBase64,
-      encoded_id: encodedId
-    };
+      return {
+        exam: {
+          ...exam.toObject(),
+          phongKham: exam.phongKham, // id
+          clinic: phongKhamObj?.ten || '' // top-level field
+        },
+        qr_code: qrImageBase64,
+        encoded_id: encodedId
+      };
   }
 
   // === Check lịch khám theo QR code với parallel operations ===
