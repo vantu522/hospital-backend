@@ -293,6 +293,9 @@ const createExam = async (req, res) => {
             message: 'CCCD chưa tích hợp BHYT: ' + bhytCheckResult.message
           });
         }
+        
+        // Nếu check BHYT thành công, lưu mã CCCD vào trường BHYT để sử dụng lại
+        req.body.BHYT = CCCD;
       } catch (bhytError) {
         return res.status(400).json({
           success: false,

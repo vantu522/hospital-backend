@@ -573,35 +573,62 @@ class HealthInsuranceExamService {
       console.log('🔍 [BHYT_CACHE] Thông tin cache BHYT hiện tại:');
       console.log('   - Tổng số cache:', Object.keys(this.bhytResultCache).length);
       console.log('   - Các khóa có trong cache:', Object.keys(this.bhytResultCache));
-      console.log('   - Đang tìm mã thẻ:', exam.BHYT);
-      console.log('   - Có tồn tại trong cache:', !!this.bhytResultCache[exam.BHYT]);
       
-      if (exam.BHYT && this.bhytResultCache[exam.BHYT]) {
+      // Thử tìm dữ liệu BHYT từ cả trường BHYT và CCCD
+      const bhytKey = exam.BHYT;
+      const cccdKey = exam.CCCD;
+      
+      console.log('   - Đang tìm mã thẻ BHYT:', bhytKey);
+      console.log('   - Đang tìm mã CCCD:', cccdKey);
+      console.log('   - BHYT có tồn tại trong cache:', !!this.bhytResultCache[bhytKey]);
+      console.log('   - CCCD có tồn tại trong cache:', !!this.bhytResultCache[cccdKey]);
+      
+      // Kiểm tra trường BHYT trước
+      if (bhytKey && this.bhytResultCache[bhytKey]) {
         try {
           // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
-          const cachedData = this.bhytResultCache[exam.BHYT];
+          const cachedData = this.bhytResultCache[bhytKey];
           
-          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy:', JSON.stringify(cachedData, null, 2));
+          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ BHYT:', JSON.stringify(cachedData, null, 2));
           
           // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
           if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
             dmBHYT = cachedData;
-            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache:', exam.BHYT);
-            console.log('🏥 [HIS] Thêm trường IsBHYT=true và IsDungTuyen=true vào payload');
+            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT):', bhytKey);
           } else {
             console.warn('🏥 [HIS] Dữ liệu BHYT cache không đúng định dạng, bỏ qua');
             console.warn('🏥 [HIS] Chi tiết dữ liệu:', 
               cachedData ? `Loại: ${typeof cachedData}, Có SoBHYT: ${!!cachedData.SoBHYT}, Có HoVaTen: ${!!cachedData.HoVaTen}` : 'null');
-            dmBHYT = null;
           }
         } catch (error) {
-          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache:', error.message);
-          dmBHYT = null;
+          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã BHYT):', error.message);
         }
-      } else if (exam.BHYT) {
-        console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache:', exam.BHYT);
+      } 
+      
+      // Nếu không tìm thấy từ BHYT, thử tìm từ CCCD
+      if (!dmBHYT && cccdKey && this.bhytResultCache[cccdKey]) {
+        try {
+          // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
+          const cachedData = this.bhytResultCache[cccdKey];
+          
+          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ CCCD:', JSON.stringify(cachedData, null, 2));
+          
+          // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
+          if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
+            dmBHYT = cachedData;
+            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD):', cccdKey);
+          } else {
+            console.warn('🏥 [HIS] Dữ liệu BHYT cache từ CCCD không đúng định dạng, bỏ qua');
+          }
+        } catch (error) {
+          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã CCCD):', error.message);
+        }
+      }
+      
+      // Nếu vẫn không tìm thấy, log thông báo
+      if (!dmBHYT && (bhytKey || cccdKey)) {
+        console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache cho cả BHYT và CCCD');
         console.log('🏥 [HIS] Các mã thẻ hiện có trong cache:', Object.keys(this.bhytResultCache).join(', ') || 'Không có');
-        // Không tạo object mặc định, để dmBHYT = null
       }
       
       // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
