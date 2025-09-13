@@ -103,7 +103,15 @@ class HealthInsuranceExamService {
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
   async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
+    // Tham số đã dùng đúng tên tiếng Việt, không cần thay đổi
     const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
+    
+    if (!bhytCheckUrl) {
+      console.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
+      return { success: false, message: 'Cấu hình API BHYT không đúng' };
+    }
+    
+    console.log('🔄 [BHYT_SERVICE] Getting token...');
     let { token, id_token } = await this.getBHYTToken();
     const body = { maThe, hoTen, ngaySinh, hoTenCb, cccdCb };
 
@@ -164,7 +172,7 @@ class HealthInsuranceExamService {
   }
 
   // === Tạo hoặc lấy slot với logic tự động tìm slot tiếp theo cho receptionist ===
-  async getOrCreateSlot(exam_date, exam_time, clinicRoom, role) {
+  async getOrCreateSlot(exam_date, exam_time, phongKham, role) {
   const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
   const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
 
@@ -235,7 +243,7 @@ class HealthInsuranceExamService {
       slotsToCheck.push({
         date: exam_date,
         timeSlot: currentTime,
-        phongKham: clinicRoom, // clinicRoom param now is phongKham string _id
+        phongKham: phongKham, 
         template: currentTemplate
       });
 
@@ -251,7 +259,7 @@ class HealthInsuranceExamService {
     const existingSlots = await ScheduleSlot.find({
       date: exam_date,
       timeSlot: { $in: slotsToCheck.map(s => s.timeSlot) },
-      phongKham: clinicRoom // clinicRoom param now is phongKham string _id
+      phongKham: phongKham
     }).lean();
 
     // Tìm slot có thể sử dụng
@@ -309,7 +317,6 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-
     // Sử dụng phongKham cho slot và queue logic
     const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.phongKham, data.role);
 
@@ -326,13 +333,13 @@ class HealthInsuranceExamService {
     }
 
     // Parallel operations sau khi đã có order_number
-      const [exam, phongKhamObj] = await Promise.all([
-        healthInsuranceExamRepository.create(data),
-        (async () => {
-          const PhongKham = (await import('../../models/phong-kham.model.js')).default;
-          return PhongKham.findOne({ _id: data.phongKham }, 'ten').lean();
-        })()
-      ]);
+    const [exam, phongKhamObj] = await Promise.all([
+      healthInsuranceExamRepository.create(data),
+      (async () => {
+        const PhongKham = (await import('../../models/phong-kham.model.js')).default;
+        return PhongKham.findOne({ _id: data.phongKham }, 'ten').lean();
+      })()
+    ]);
 
       const encodedId = Buffer.from(exam._id.toString()).toString('base64');
       const qrImageBase64 = await QRCode.toDataURL(encodedId);
@@ -370,8 +377,10 @@ class HealthInsuranceExamService {
     }
 
     if (exam.status !== 'accept') {
-      // Lấy max order number trước
-      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber();
+      // Lấy max order number trước - lọc theo ngày hiện tại
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber(today);
       const newOrderNumber = maxOrder + 1;
       
       // Update exam với order number và status

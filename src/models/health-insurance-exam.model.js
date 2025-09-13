@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
 
 const HealthInsuranceExamSchema = new mongoose.Schema({
-  full_name: { type: String, required: true, trim: true },
-  phone_number: { type: String, trim: true },
+  HoTen: { type: String, required: true, trim: true },
+  DienThoai: { type: String, trim: true },
   email: { type: String, trim: true },
-  citizen_id: { type: String, trim: true },
-  date_of_birth: { type: Date, required: true },
-  gender: { type: String, required: true, enum: ['Nam', 'Nữ', 'Khác'] },
-  address: { type: String, required: true, trim: true },
-  health_insurance_number: { type: String, trim: true }, // BHYT 
+  CCCD: { type: String, trim: true },
+  NgaySinh: { type: Date, required: true },
+  GioiTinh: { type: String, required: true, enum: ['Nam', 'Nữ', 'Khác'] },
+  DiaChi: { type: String, required: true, trim: true },
+  BHYT: { type: String, trim: true }, // BHYT 
   phongKham: { type: String, ref: 'PhongKham', required: true },
   exam_type: {
     type: String,
@@ -20,6 +20,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
       ref: 'ScheduleSlot',
       required: true,
   },
+  IsDonTiepCCCD: { type: Boolean, default: false },
   
   exam_date: { type: Date, required: true },
   exam_time: { type: String, required: true },
@@ -33,7 +34,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
 HealthInsuranceExamSchema.index({ order_number: -1 }); // Cho việc tìm max order
 HealthInsuranceExamSchema.index({ exam_date: 1, status: 1 }); // Cho search theo ngày và status
 HealthInsuranceExamSchema.index({ phongKham: 1, exam_date: 1 }); // Cho filter theo phòng khám
-HealthInsuranceExamSchema.index({ health_insurance_number: 1 }); // Cho check BHYT
-HealthInsuranceExamSchema.index({ citizen_id: 1 }); // Cho search theo CCCD
+HealthInsuranceExamSchema.index({ BHYT: 1 }); // Cho check BHYT
+HealthInsuranceExamSchema.index({ CCCD: 1 }); // Cho search theo CCCD
 
 export default mongoose.model('HealthInsuranceExam', HealthInsuranceExamSchema);

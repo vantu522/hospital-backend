@@ -4,7 +4,7 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  * @swagger
  * /api/health-insurance-exams/check-bhyt-date:
  *   post:
- *     summary: Kiểm tra thông tin thẻ BHYT qua API quốc gia
+ *     summary: Kiểm tra thông tin CCCD qua API quốc gia
  *     tags:
  *       - HealthInsuranceExam
  *     requestBody:
@@ -20,7 +20,7 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  *             properties:
  *               maThe:
  *                 type: string
- *                 description: Mã thẻ BHYT
+ *                 description: Mã CCCD
  *               hoTen:
  *                 type: string
  *                 description: Họ tên người khám
@@ -28,12 +28,12 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  *                 type: string
  *                 description: "Ngày sinh (dd/mm/yyyy, ví dụ 25/08/1990)"
  *           example:
- *             maThe: "DN1234567890123"
+ *             maThe: "001205036719"
  *             hoTen: "Nguyen Van A"
  *             ngaySinh: "25/08/1990"
  *     responses:
  *       200:
- *         description: Thông tin thẻ BHYT hợp lệ
+ *         description: Thông tin CCCD hợp lệ
  *         content:
  *           application/json:
  *             schema:
@@ -45,7 +45,7 @@ import healthInsuranceExamService from '../services/health-insurance-exam.servic
  *                   type: object
  *                   description: Thông tin trả về từ API quốc gia
  *       400:
- *         description: Thông tin thẻ BHYT không hợp lệ hoặc lỗi xác thực
+ *         description: Thông tin CCCD không hợp lệ hoặc lỗi xác thực
  *         content:
  *           application/json:
  *             schema:
@@ -62,7 +62,7 @@ const checkBHYTCard = async (req, res) => {
   try {
     const { maThe, hoTen, ngaySinh } = req.body;
     if (!maThe || !hoTen || !ngaySinh) {
-      return res.status(400).json({ success: false, message: 'Thiếu thông tin thẻ BHYT' });
+      return res.status(400).json({ success: false, message: 'Thiếu thông tin mã CCCD, họ tên hoặc ngày sinh' });
     }
     const result = await healthInsuranceExamService.checkBHYTCard({ maThe, hoTen, ngaySinh });
     return res.status(result.success ? 200 : 400).json(result);
@@ -86,36 +86,37 @@ const checkBHYTCard = async (req, res) => {
  *           schema:
  *             type: object
  *             required:
- *               - full_name
- *               - citizen_id
- *               - date_of_birth
- *               - gender
- *               - address
- *               - clinicRoom
+ *               - HoTen
+ *               - DienThoai
+ *               - CCCD
+ *               - NgaySinh
+ *               - GioiTinh
+ *               - DiaChi
+ *               - phongKham
  *               - exam_type
  *               - exam_date
  *               - exam_time
  *             properties:
- *               full_name:
+ *               HoTen:
  *                 type: string
- *               phone_number:
+ *               DienThoai:
  *                 type: string
  *               email:
  *                 type: string
  *                 format: email
- *               citizen_id:
+ *               CCCD:
  *                 type: string
- *               date_of_birth:
+ *               NgaySinh:
  *                 type: string
  *                 format: date
- *               gender:
-*                 type: string
-*                 enum: [Nam, Nữ, Khác]
- *               address:
+ *               GioiTinh:
  *                 type: string
- *               health_insurance_number:
+ *                 enum: [Nam, Nữ, Khác]
+ *               DiaChi:
  *                 type: string
- *               clinicRoom:
+ *               BHYT:
+ *                 type: string
+ *               phongKham:
  *                 type: string
  *                 description: ObjectId của phòng khám (ClinicRoom)
  *               exam_type:
@@ -129,6 +130,9 @@ const checkBHYTCard = async (req, res) => {
  *                 type: string
  *               symptoms:
  *                 type: string
+ *               IsDonTiepCCCD:
+ *                 type: boolean
+ *                 description: Đánh dấu đơn tiếp CCCD
  *     responses:
  *       201:
  *         description: Đặt lịch khám thành công
@@ -153,28 +157,33 @@ const checkBHYTCard = async (req, res) => {
 const createExam = async (req, res) => {
   try {
     // Logic check BHYT dựa trên role
-    const { exam_type, health_insurance_number, full_name, date_of_birth } = req.body;
+    const { 
+      exam_type, 
+      CCCD,
+      HoTen,
+      NgaySinh
+    } = req.body;
     
     // Chỉ call API BHYT nếu:
     // 1. Role là 'user' (không phải receptionist)
     // 2. exam_type là 'BHYT' (không phải 'DV')  
-    // 3. Có đầy đủ thông tin BHYT
+    // 3. Có đầy đủ thông tin CCCD
     if (req.role !== 'receptionist' && 
         exam_type === 'BHYT' && 
-        health_insurance_number && 
-        full_name && 
-        date_of_birth) {
+        CCCD && 
+        HoTen && 
+        NgaySinh) {
       
       console.log('🔍 [BOOKING] Calling BHYT API for user booking');
       
       try {
-        // Convert date_of_birth sang format dd/mm/yyyy cho API BHYT
+        // Convert NgaySinh sang format dd/mm/yyyy cho API BHYT
         let formattedDate;
-        if (typeof date_of_birth === 'string' && date_of_birth.includes('/')) {
-          formattedDate = date_of_birth;
+        if (typeof NgaySinh === 'string' && NgaySinh.includes('/')) {
+          formattedDate = NgaySinh;
         } else {
           
-          const dateObj = new Date(date_of_birth);
+          const dateObj = new Date(NgaySinh);
           const day = String(dateObj.getDate()).padStart(2, '0');
           const month = String(dateObj.getMonth() + 1).padStart(2, '0');
           const year = dateObj.getFullYear();
@@ -183,8 +192,8 @@ const createExam = async (req, res) => {
         
         
         const bhytCheckResult = await healthInsuranceExamService.checkBHYTCard({
-          maThe: health_insurance_number,    
-          hoTen: full_name,                   
+          maThe: CCCD,    
+          hoTen: HoTen,                   
           ngaySinh: formattedDate           
         });
         
@@ -192,13 +201,13 @@ const createExam = async (req, res) => {
         if (!bhytCheckResult.success) {
           return res.status(400).json({
             success: false,
-            message: 'Thẻ BHYT không hợp lệ: ' + bhytCheckResult.message
+            message: 'CCCD chưa tích hợp BHYT: ' + bhytCheckResult.message
           });
         }
       } catch (bhytError) {
         return res.status(400).json({
           success: false,
-          message: 'Lỗi kiểm tra thẻ BHYT: ' + bhytError.message
+          message: 'Lỗi khi gọi cổng BHYT: ' + bhytError.message
         });
       }
     }
