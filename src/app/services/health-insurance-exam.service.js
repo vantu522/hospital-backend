@@ -693,8 +693,7 @@ class HealthInsuranceExamService {
         IdCanBoDonTiep:"3923362b-5ec4-4d11-ae0f-684001f67748",
         IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
         IdNguonDonTiep: "00000000-0000-0000-0000-000000000000",
-        IdBHYT: "062b5056-5be0-4b3e-b929-e19d652da1e4",
-        
+        NgayKham: formatDisplayTime()
       };
       
       // Log đầy đủ payload để debug
