@@ -105,12 +105,8 @@ const validateInsuranceExam = (req, res, next) => {
   if (!data.TenNgheNghiep || !data.TenNgheNghiep.trim()) {
     errors.push('Tên nghề nghiệp không được để trống');
   }
-  if (!data.IdCanBoDonTiep || !data.IdCanBoDonTiep.trim()) {
-    errors.push('ID cán bộ đón tiếp không được để trống');
-  }
-  if (!data.IdBenhVien || !data.IdBenhVien.trim()) {
-    errors.push('ID bệnh viện không được để trống');
-  }
+  
+  
   
   if (!data.exam_date || !data.exam_date.trim()) {
     errors.push('Ngày khám không được để trống');
