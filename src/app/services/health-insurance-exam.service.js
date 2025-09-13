@@ -511,8 +511,24 @@ class HealthInsuranceExamService {
       
       // Định dạng ngày tháng cho hiển thị
       const formatDisplayDate = (date) => {
-        const d = new Date(date);
-        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        if (!date) return '';
+        
+        try {
+          // Chuyển đổi sang đối tượng Date nếu không phải
+          const d = date instanceof Date ? date : new Date(date);
+          
+          // Kiểm tra date hợp lệ
+          if (isNaN(d.getTime())) {
+            console.error('❌ [HIS] Ngày không hợp lệ:', date);
+            return '';
+          }
+          
+          // Format thành mm/dd/yyyy
+          return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+        } catch (error) {
+          console.error('❌ [HIS] Lỗi chuyển đổi ngày tháng:', error.message);
+          return '';
+        }
       };
       
       const formatDisplayTime = () => {
