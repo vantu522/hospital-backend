@@ -103,6 +103,13 @@ class HealthInsuranceExamService {
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
   async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
+    console.log('🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT:', { maThe, hoTen, ngaySinh });
+    
+    // Log thông tin cache hiện tại trước khi kiểm tra
+    console.log('🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra:');
+    console.log('   - Số lượng mã thẻ trong cache:', Object.keys(this.bhytResultCache).length);
+    console.log('   - Danh sách mã thẻ trong cache:', Object.keys(this.bhytResultCache));
+    
     // Tham số đã dùng đúng tên tiếng Việt, không cần thay đổi
     const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
     
@@ -138,7 +145,18 @@ class HealthInsuranceExamService {
       if (response.data?.maKetQua === "000") {
         // Cache kết quả convert cho maThe
         const converted = this.convertBHYTToThirdParty(response.data);
+        
+        // Log dữ liệu converted để debug
+        console.log('✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ:', maThe);
+        console.log('✅ [BHYT_CACHE] Dữ liệu converted:', JSON.stringify(converted, null, 2));
+        
+        // Lưu vào cache
         this.bhytResultCache[maThe] = converted;
+        
+        // Log danh sách cache hiện tại
+        console.log('✅ [BHYT_CACHE] Danh sách cache hiện tại:', 
+          Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })));
+        
         return { success: true, data: response.data, converted };
       } else {
         return { 
@@ -542,19 +560,46 @@ class HealthInsuranceExamService {
       
       // Lấy thông tin BHYT từ cache nếu có
       let dmBHYT = null;
+      
+      // Log thông tin về cache BHYT hiện tại
+      console.log('🔍 [BHYT_CACHE] Thông tin cache BHYT hiện tại:');
+      console.log('   - Tổng số cache:', Object.keys(this.bhytResultCache).length);
+      console.log('   - Các khóa có trong cache:', Object.keys(this.bhytResultCache));
+      console.log('   - Đang tìm mã thẻ:', exam.BHYT);
+      console.log('   - Có tồn tại trong cache:', !!this.bhytResultCache[exam.BHYT]);
+      
       if (exam.BHYT && this.bhytResultCache[exam.BHYT]) {
-        dmBHYT = this.bhytResultCache[exam.BHYT];
-        console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache:', exam.BHYT);
-        console.log('🏥 [HIS] Thêm trường IsBHYT=true và IsDungTuyen=true vào payload');
+        try {
+          // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
+          const cachedData = this.bhytResultCache[exam.BHYT];
+          
+          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy:', JSON.stringify(cachedData, null, 2));
+          
+          // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
+          if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
+            dmBHYT = cachedData;
+            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache:', exam.BHYT);
+            console.log('🏥 [HIS] Thêm trường IsBHYT=true và IsDungTuyen=true vào payload');
+          } else {
+            console.warn('🏥 [HIS] Dữ liệu BHYT cache không đúng định dạng, bỏ qua');
+            console.warn('🏥 [HIS] Chi tiết dữ liệu:', 
+              cachedData ? `Loại: ${typeof cachedData}, Có SoBHYT: ${!!cachedData.SoBHYT}, Có HoVaTen: ${!!cachedData.HoVaTen}` : 'null');
+            dmBHYT = null;
+          }
+        } catch (error) {
+          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache:', error.message);
+          dmBHYT = null;
+        }
       } else if (exam.BHYT) {
         console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache:', exam.BHYT);
+        console.log('🏥 [HIS] Các mã thẻ hiện có trong cache:', Object.keys(this.bhytResultCache).join(', ') || 'Không có');
         // Không tạo object mặc định, để dmBHYT = null
       }
       
       // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
       const payload = {
-        
-        DmBHYT: dmBHYT,
+        // Chỉ thêm DmBHYT vào payload nếu có dữ liệu hợp lệ
+        ...(dmBHYT && { DmBHYT: dmBHYT }),
         
         HoTen: exam.HoTen,
         NgaySinh: formatDisplayDate(exam.NgaySinh),
