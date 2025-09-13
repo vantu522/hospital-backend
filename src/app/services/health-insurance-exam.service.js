@@ -691,7 +691,8 @@ class HealthInsuranceExamService {
         IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
         IdCanBoDonTiep:"3923362b-5ec4-4d11-ae0f-684001f67748",
-        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957"
+        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
+        IdNguonDonTiep: "00000000-0000-0000-0000-000000000000"
       };
       
       // Log đầy đủ payload để debug
