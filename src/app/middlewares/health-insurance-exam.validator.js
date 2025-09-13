@@ -3,6 +3,31 @@ const validateInsuranceExam = (req, res, next) => {
   const errors = [];
   const data = req.body;
 
+  // Xử lý định dạng ngày tháng trước khi validate
+  try {
+    // Chuyển đổi NgaySinh từ dd/mm/yyyy sang định dạng ISO Date nếu cần
+    if (data.NgaySinh && typeof data.NgaySinh === 'string') {
+      if (data.NgaySinh.includes('/')) {
+        // Định dạng dd/mm/yyyy
+        const [day, month, year] = data.NgaySinh.split('/');
+        // Tạo date string định dạng ISO: YYYY-MM-DD
+        data.NgaySinh = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+
+    // Chuyển đổi exam_date từ dd/mm/yyyy sang định dạng ISO Date nếu cần
+    if (data.exam_date && typeof data.exam_date === 'string') {
+      if (data.exam_date.includes('/')) {
+        // Định dạng dd/mm/yyyy
+        const [day, month, year] = data.exam_date.split('/');
+        // Tạo date string định dạng ISO: YYYY-MM-DD
+        data.exam_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+  } catch (error) {
+    errors.push('Lỗi định dạng ngày tháng: ' + error.message);
+  }
+
   // Cơ bản
   if (!data.HoTen || !data.HoTen.trim()) {
     errors.push('Họ tên không được để trống');

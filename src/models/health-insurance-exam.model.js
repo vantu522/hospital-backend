@@ -33,8 +33,8 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   IdKhoaKham: { type: String, required: true, trim: true },
   IdNgheNghiep: { type: String, required: true, trim: true },
   TenNgheNghiep: { type: String, required: true, trim: true },
-  IdCanBoDonTiep: { type: String, required: true, trim: true },
-  IdBenhVien: { type: String, required: true, trim: true },
+  IdCanBoDonTiep: { type: String,  trim: true },
+  IdBenhVien: { type: String,  trim: true },
   
   exam_type: {
     type: String,

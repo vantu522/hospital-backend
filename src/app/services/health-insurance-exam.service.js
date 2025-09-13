@@ -341,27 +341,38 @@ class HealthInsuranceExamService {
       })()
     ]);
 
-    // Nếu status là accept (role là receptionist), đẩy ngay lên HIS
+    // Nếu status là accept (role là receptionist), đẩy ngay lên HIS và đợi kết quả
     if (data.status === 'accept') {
       console.log('🏥 [HIS] Đẩy dữ liệu lên HIS cho bản ghi có status accept');
-      // Đẩy bất đồng bộ lên HIS, không chờ kết quả để tránh làm chậm response
-      this.pushToHIS(exam).catch(err => {
-        console.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS:', err.message);
-      });
+      
+      // Đợi kết quả từ HIS
+      const hisResult = await this.pushToHIS(exam);
+      
+      // Nếu không thành công, trả về lỗi
+      if (!hisResult.success) {
+        // Lấy thông tin lỗi chi tiết từ kết quả
+        const errorDetails = hisResult.details && Object.keys(hisResult.details).length > 0 
+          ? JSON.stringify(hisResult.details) 
+          : hisResult.error;
+        
+        throw new Error(`Không thể đẩy dữ liệu lên HIS: ${errorDetails}`);
+      }
+      
+      console.log('✅ [HIS] Đẩy dữ liệu lên HIS thành công');
     }
 
     const encodedId = Buffer.from(exam._id.toString()).toString('base64');
     const qrImageBase64 = await QRCode.toDataURL(encodedId);
 
-      return {
-        exam: {
-          ...exam.toObject(),
-          IdPhongKham: exam.IdPhongKham, // id
-          clinic: phongKhamObj?.ten || '' // top-level field
-        },
-        qr_code: qrImageBase64,
-        encoded_id: encodedId
-      };
+    return {
+      exam: {
+        ...exam.toObject(),
+        IdPhongKham: exam.IdPhongKham, // id
+        clinic: phongKhamObj?.ten || '' // top-level field
+      },
+      qr_code: qrImageBase64,
+      encoded_id: encodedId
+    };
   }
 
   // === Check lịch khám theo QR code với parallel operations ===
@@ -399,10 +410,23 @@ class HealthInsuranceExamService {
       exam.status = 'accept';
       exam.order_number = newOrderNumber;
       
-      // Đẩy lên HIS ngay sau khi update status thành accept
-      this.pushToHIS(updatedExam).catch(err => {
-        console.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:', err.message);
-      });
+      // Đẩy lên HIS ngay sau khi update status thành accept và đợi kết quả
+      console.log('🏥 [HIS] Đẩy dữ liệu lên HIS sau khi update status');
+      const hisResult = await this.pushToHIS(updatedExam);
+      
+      if (!hisResult.success) {
+        // Log lỗi nhưng vẫn cho phép check-in thành công vì đã cập nhật status và order_number
+        console.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:', 
+          hisResult.details ? JSON.stringify(hisResult.details) : hisResult.error);
+        
+        // Vẫn cho phép check-in thành công nhưng thêm thông tin lỗi
+        return { 
+          valid: true, 
+          message: 'Lịch khám hợp lệ, check-in thành công. Lưu ý: Không thể đồng bộ với HIS.', 
+          exam,
+          warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.'
+        };
+      }
     }
 
     return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };
