@@ -106,9 +106,9 @@ const validateInsuranceExam = (req, res, next) => {
     errors.push('Tên nghề nghiệp không được để trống');
   }
   
-  if(!data.SoNha || !data.SoNha.trim()) {
-    errors.push('Số nhà không được để trống');
-  }
+  //if(!data.SoNha || !data.SoNha.trim()) {
+    //errors.push('Số nhà không được để trống');
+  //}
   
   if (!data.exam_date || !data.exam_date.trim()) {
     errors.push('Ngày khám không được để trống');
