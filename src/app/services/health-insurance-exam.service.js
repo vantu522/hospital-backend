@@ -551,7 +551,15 @@ class HealthInsuranceExamService {
       
       const formatDisplayTime = () => {
         const now = new Date();
-        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${formatDisplayDate(now)}`;
+        // Format thành mm/dd/yyyy HH:mm
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        // Trả về định dạng mm/dd/yyyy HH:mm cho API HIS
+        return `${hours}:${minutes} ${month}/${day}/${year}`;
       };
       
       // Lấy phòng khám
