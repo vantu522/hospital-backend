@@ -657,7 +657,7 @@ class HealthInsuranceExamService {
         DienThoai: exam.DienThoai,
         DiaChi: exam.DiaChi,
         IsDonTiepCCCD: exam.IsDonTiepCCCD,
-        Tuoi: exam.Tuoi || 30,
+        Tuoi: exam.Tuoi || "18",
         // Lấy SoBHYT từ cache dmBHYT nếu có, nếu không thì lấy từ exam
         SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
         
