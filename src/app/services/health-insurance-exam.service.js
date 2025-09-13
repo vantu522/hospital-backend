@@ -682,6 +682,7 @@ class HealthInsuranceExamService {
         IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
         
         // Thông tin khác
+        IdKhoaDonTiep: "cee9a4d9-c3d4-4712-b49d-82d2f6755cfc",
         IdDanToc: exam.IdDanToc || "5cdeb1cd-bd45-4846-ae11-222fd111415c",
         TenDanToc: exam.TenDanToc || "Thái",
         IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
