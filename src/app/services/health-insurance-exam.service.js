@@ -652,7 +652,7 @@ class HealthInsuranceExamService {
         MaPhongKham: exam.MaPhongKham || "K02.03.A",
         TenPhongKham: exam.TenPhongKham || "Phòng Khám Đái Tháo Đường 236A",
         IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
-        
+        Sonha: exam.Sonha || "236A",
         // Thông tin liên hệ
         DienThoai: exam.DienThoai ,
         DiaChi: exam.DiaChi ,
