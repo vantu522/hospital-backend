@@ -172,7 +172,7 @@ class HealthInsuranceExamService {
   }
 
   // === Tạo hoặc lấy slot với logic tự động tìm slot tiếp theo cho receptionist ===
-  async getOrCreateSlot(exam_date, exam_time, phongKham, role) {
+  async getOrCreateSlot(exam_date, exam_time, IdPhongKham, role) {
   const ScheduleSlot = (await import('../../models/schedule-slot.model.js')).default;
   const TimeSlotTemplate = (await import('../../models/time-slot-template.model.js')).default;
 
@@ -243,7 +243,7 @@ class HealthInsuranceExamService {
       slotsToCheck.push({
         date: exam_date,
         timeSlot: currentTime,
-        phongKham: phongKham, 
+        IdPhongKham: IdPhongKham, 
         template: currentTemplate
       });
 
@@ -259,7 +259,7 @@ class HealthInsuranceExamService {
     const existingSlots = await ScheduleSlot.find({
       date: exam_date,
       timeSlot: { $in: slotsToCheck.map(s => s.timeSlot) },
-      phongKham: phongKham
+      IdPhongKham: IdPhongKham
     }).lean();
 
     // Tìm slot có thể sử dụng
@@ -272,7 +272,7 @@ class HealthInsuranceExamService {
           slot = await ScheduleSlot.create({
             date: exam_date,
             timeSlot: slotInfo.timeSlot,
-            phongKham: slotInfo.phongKham,
+            IdPhongKham: slotInfo.IdPhongKham,
             capacity: slotInfo.template.capacity,
             currentCount: 1,
             is_active: true
@@ -317,14 +317,14 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-    // Sử dụng phongKham cho slot và queue logic
-    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.phongKham, data.role);
+    // Sử dụng IdPhongKham cho slot và queue logic
+    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.IdPhongKham, data.role);
 
     // Cập nhật lại giờ khám nếu có điều chỉnh
     data.exam_time = adjustedTime;
     data.status = data.role === 'receptionist' ? 'accept' : 'pending';
     data.slotId = slot._id;
-    data.phongKham = slot.phongKham;
+    data.IdPhongKham = slot.IdPhongKham;
 
     // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
@@ -337,17 +337,26 @@ class HealthInsuranceExamService {
       healthInsuranceExamRepository.create(data),
       (async () => {
         const PhongKham = (await import('../../models/phong-kham.model.js')).default;
-        return PhongKham.findOne({ _id: data.phongKham }, 'ten').lean();
+        return PhongKham.findOne({ _id: data.IdPhongKham }, 'ten').lean();
       })()
     ]);
 
-      const encodedId = Buffer.from(exam._id.toString()).toString('base64');
-      const qrImageBase64 = await QRCode.toDataURL(encodedId);
+    // Nếu status là accept (role là receptionist), đẩy ngay lên HIS
+    if (data.status === 'accept') {
+      console.log('🏥 [HIS] Đẩy dữ liệu lên HIS cho bản ghi có status accept');
+      // Đẩy bất đồng bộ lên HIS, không chờ kết quả để tránh làm chậm response
+      this.pushToHIS(exam).catch(err => {
+        console.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS:', err.message);
+      });
+    }
+
+    const encodedId = Buffer.from(exam._id.toString()).toString('base64');
+    const qrImageBase64 = await QRCode.toDataURL(encodedId);
 
       return {
         exam: {
           ...exam.toObject(),
-          phongKham: exam.phongKham, // id
+          IdPhongKham: exam.IdPhongKham, // id
           clinic: phongKhamObj?.ten || '' // top-level field
         },
         qr_code: qrImageBase64,
@@ -389,14 +398,204 @@ class HealthInsuranceExamService {
       // Cập nhật object exam để trả về đúng
       exam.status = 'accept';
       exam.order_number = newOrderNumber;
+      
+      // Đẩy lên HIS ngay sau khi update status thành accept
+      this.pushToHIS(updatedExam).catch(err => {
+        console.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:', err.message);
+      });
     }
 
     return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };
   }
 
-  // === Push lên HIS (placeholder) ===
+  // Cache token HIS
+  hisTokenCache = {
+    access_token: null,
+    expiresAt: null
+  }
+
+  // === Lấy token HIS với caching ===
+  async getHISToken() {
+    console.log('🔑 [HIS] Kiểm tra token HIS');
+    
+    // Kiểm tra token cache còn hạn không
+    if (this.hisTokenCache.access_token && 
+        this.hisTokenCache.expiresAt > Date.now()) {
+      console.log('🔑 [HIS] Sử dụng token HIS đã cache');
+      return this.hisTokenCache.access_token;
+    }
+    
+    try {
+      const { API_LOGIN_HIS_URL, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
+      
+      if (!API_LOGIN_HIS_URL || !HIS_ACCOUNT || !HIS_PASSWORD) {
+        throw new Error('Thiếu thông tin cấu hình kết nối HIS');
+      }
+      
+      console.log('🔑 [HIS] Đang lấy token mới từ:', API_LOGIN_HIS_URL);
+      
+      // Tạo params theo định dạng form-urlencoded
+      const params = new URLSearchParams();
+      params.append('client_id', CLIENT_ID_HIS);
+      params.append('grant_type', 'password');
+      params.append('username', HIS_ACCOUNT);
+      params.append('password', HIS_PASSWORD);
+            
+      // Headers cho form-urlencoded
+      const headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+      
+      // Gửi request với params
+      const response = await axios.post(API_LOGIN_HIS_URL, params, { headers });
+      
+      console.log('✅ [HIS] Nhận phản hồi từ server HIS:', response.status);
+      
+      if (!response.data || !response.data.access_token) {
+        console.error('❌ [HIS] Phản hồi không có access_token:', response.data);
+        throw new Error('Không nhận được access_token từ HIS');
+      }
+      
+      // Cache token với thời hạn - giảm 60s để đảm bảo an toàn
+      const expiresIn = response.data.expires_in || 3600; // Mặc định 1 giờ nếu không có
+      this.hisTokenCache = {
+        access_token: response.data.access_token,
+        expiresAt: Date.now() + (expiresIn - 60) * 1000
+      };
+      
+      console.log('🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau:', expiresIn, 'giây');
+      return this.hisTokenCache.access_token;
+      
+    } catch (error) {
+      console.error('❌ [HIS] Lỗi khi lấy token HIS:', error.message);
+      throw new Error(`Không thể lấy token HIS: ${error.message}`);
+    }
+  }
   async pushToHIS(exam) {
-    console.log('Đẩy thông tin lên HIS:', exam._id);
+    console.log('🏥 [HIS] Đẩy thông tin lên HIS:', exam._id);
+    try {
+      // 1. Lấy token trước khi gọi API
+      const token = await this.getHISToken();
+      
+      // 2. Lấy API URL từ biến môi trường
+      const { API_PUSH_TO_HIS_URL } = process.env;
+      if (!API_PUSH_TO_HIS_URL) {
+        throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_URL');
+      }
+      
+      console.log('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
+      
+      // Định dạng ngày tháng cho hiển thị
+      const formatDisplayDate = (date) => {
+        const d = new Date(date);
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      };
+      
+      const formatDisplayTime = () => {
+        const now = new Date();
+        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${formatDisplayDate(now)}`;
+      };
+      
+      // Lấy phòng khám
+      const PhongKham = (await import('../../models/phong-kham.model.js')).default;
+      const clinic = await PhongKham.findById(exam.IdPhongKham).lean();
+      
+      // Lấy thông tin BHYT từ cache nếu có
+      let dmBHYT = null;
+      if (exam.BHYT && this.bhytResultCache[exam.BHYT]) {
+        dmBHYT = this.bhytResultCache[exam.BHYT];
+        console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache:', exam.BHYT);
+        console.log('🏥 [HIS] Thêm trường IsBHYT=true và IsDungTuyen=true vào payload');
+      } else if (exam.BHYT) {
+        console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache:', exam.BHYT);
+        // Không tạo object mặc định, để dmBHYT = null
+      }
+      
+      // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
+      const payload = {
+        
+        DmBHYT: dmBHYT,
+        
+        HoTen: exam.HoTen,
+        NgaySinh: formatDisplayDate(exam.NgaySinh),
+        GioiTinh: exam.GioiTinh === 'Nam',
+        
+        // Thêm trường IsBHYT và IsDungTuyen khi có BHYT
+        ...(dmBHYT && {
+          IsBHYT: true,
+          IsDungTuyen: true
+        }),
+        
+        // Thông tin phòng khám
+        IdPhongKham: exam.IdPhongKham || "13e4be91-38ff-4403-b07a-912e7995a259",
+        MaPhongKham: exam.MaPhongKham || "K02.03.A",
+        TenPhongKham: exam.TenPhongKham || "Phòng Khám Đái Tháo Đường 236A",
+        IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
+        
+        // Thông tin liên hệ
+        DienThoai: exam.DienThoai ,
+        DiaChi: exam.DiaChi ,
+        
+        IsDonTiepCCCD: exam.IsDonTiepCCCD,
+        
+        NgayDonTiep: formatDisplayTime(),
+        Status: 0,
+        
+        // Thông tin địa chỉ
+        MaTinh: exam.MaTinh || "01",
+        TenTinh: exam.TenTinh || "Thành phố Hà Nội",
+        IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
+        MaXa: exam.MaXa || "00118",
+        TenXa: exam.TenXa || "Phường Bồ Đề",
+        IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
+        
+        // Thông tin khác
+        IdDanToc: exam.IdDanToc || "5cdeb1cd-bd45-4846-ae11-222fd111415c",
+        TenDanToc: exam.TenDanToc || "Thái",
+        IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
+        IdKhoaKham: exam.IdKhoaKham || "43871a8e-9d9f-4672-91aa-ab6ce2526c7b",
+        IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
+        TenNgheNghiep: exam.TenNgheNghiep || "Khác",
+        IdCanBoDonTiep:"3923362b-5ec4-4d11-ae0f-684001f67748",
+        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957"
+      };
+      
+      // Log đầy đủ payload để debug
+      console.log('🏥 [HIS] Chi tiết payload gửi lên HIS:', JSON.stringify(payload, null, 2));
+      
+      
+      // 5. Gọi API với token trong header
+      const response = await axios.post(API_PUSH_TO_HIS_URL, payload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ [HIS] Phản hồi từ API HIS:', response.status, response.statusText);
+      console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
+      
+      // 6. Trả về kết quả
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      // Log lỗi ngắn gọn nhưng đầy đủ thông tin quan trọng
+      console.error(`❌ [HIS] Lỗi: ${error.message} | Bệnh nhân: ${exam.HoTen} (ID: ${exam._id})`);
+      
+      // Log dữ liệu response lỗi từ server nếu có
+      if (error.response?.data) {
+        console.error('❌ [HIS] Data lỗi:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      // Không throw lỗi ở đây để không ảnh hưởng đến luồng chính
+      return {
+        success: false,
+        error: error.message,
+        details: error.response?.data || {}
+      };
+    }
   }
 }
 

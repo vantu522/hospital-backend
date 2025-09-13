@@ -1,0 +1,35 @@
+{
+  "DmBHYT": null,
+  "HoTen": "Nguyễn Văn A",
+  "NgaySinh": "15/09/1990",
+  "GioiTinh": true,
+  
+  "IdPhongKham": "13e4be91-38ff-4403-b07a-912e7995a259",
+  "MaPhongKham": "K02.03.A",
+  "TenPhongKham": "Phòng Khám Đái Tháo Đường 236A",
+  "IdLoaiKham": "fc8dba41-634a-4ec6-9451-c23106dc813a",
+  
+  "DienThoai": "0987654321",
+  "DiaChi": "Số 123 Đường ABC, Phường Bồ Đề, Quận Long Biên, Hà Nội",
+  
+  "IsDonTiepCCCD": true,
+  
+  "NgayDonTiep": "14:30 13/09/2025",
+  "Status": 0,
+  
+  "MaTinh": "01",
+  "TenTinh": "Thành phố Hà Nội",
+  "IdTinhThanh": "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
+  "MaXa": "00118",
+  "TenXa": "Phường Bồ Đề",
+  "IdXaPhuong": "a99edb8e-99cd-46fc-a931-850b7caa749e",
+  
+  "IdDanToc": "5cdeb1cd-bd45-4846-ae11-222fd111415c",
+  "TenDanToc": "Thái",
+  "IdQuocTich": "e28c648f-be25-4597-90ce-7ec40031625e",
+  "IdKhoaKham": "43871a8e-9d9f-4672-91aa-ab6ce2526c7b",
+  "IdNgheNghiep": "f39d6834-74a5-4aac-8603-2a26ab002023",
+  "TenNgheNghiep": "Khác",
+  "IdCanBoDonTiep": "3923362b-5ec4-4d11-ae0f-684001f67748",
+  "IdBenhVien": "5f2a991f-a74a-4d71-b183-5d18919d0957"
+}

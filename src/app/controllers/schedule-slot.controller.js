@@ -13,7 +13,7 @@
  *             required:
  *               - date
  *               - timeSlot
- *               - clinicRoom
+ *               - IdPhongKham
  *               - capacity
  *             properties:
  *               date:
@@ -21,7 +21,7 @@
  *                 format: date
  *               timeSlot:
  *                 type: string
- *               clinicRoom:
+ *               IdPhongKham:
  *                 type: string
  *                 description: ObjectId của phòng khám
  *               capacity:

@@ -88,37 +88,123 @@ const checkBHYTCard = async (req, res) => {
  *             required:
  *               - HoTen
  *               - DienThoai
- *               - CCCD
  *               - NgaySinh
  *               - GioiTinh
  *               - DiaChi
- *               - phongKham
+ *               - IdPhongKham
+ *               - MaPhongKham
+ *               - TenPhongKham
+ *               - IdLoaiKham
+ *               - MaTinh
+ *               - TenTinh
+ *               - IdTinhThanh
+ *               - MaXa
+ *               - TenXa
+ *               - IdXaPhuong
+ *               - IdDanToc
+ *               - TenDanToc
+ *               - IdQuocTich
+ *               - IdKhoaKham
+ *               - IdNgheNghiep
+ *               - TenNgheNghiep
+ *               - IdCanBoDonTiep
+ *               - IdBenhVien
  *               - exam_type
  *               - exam_date
  *               - exam_time
+ *               - IsDonTiepCCCD
  *             properties:
  *               HoTen:
  *                 type: string
+ *                 description: Họ tên bệnh nhân
  *               DienThoai:
  *                 type: string
+ *                 description: Số điện thoại liên hệ
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Email liên hệ (không bắt buộc)
  *               CCCD:
  *                 type: string
+ *                 description: Số căn cước công dân (bắt buộc nếu IsDonTiepCCCD=true)
  *               NgaySinh:
  *                 type: string
  *                 format: date
+ *                 description: Ngày sinh bệnh nhân
  *               GioiTinh:
  *                 type: string
  *                 enum: [Nam, Nữ, Khác]
+ *                 description: Giới tính bệnh nhân
  *               DiaChi:
  *                 type: string
+ *                 description: Địa chỉ liên hệ
  *               BHYT:
  *                 type: string
- *               phongKham:
+ *                 description: Số bảo hiểm y tế (không bắt buộc)
+ *               
+ *               # Thông tin phòng khám
+ *               IdPhongKham:
  *                 type: string
- *                 description: ObjectId của phòng khám (ClinicRoom)
+ *                 description: ID phòng khám 
+ *               MaPhongKham:
+ *                 type: string
+ *                 description: Mã phòng khám
+ *               TenPhongKham:
+ *                 type: string
+ *                 description: Tên phòng khám
+ *               
+ *               # Thông tin loại khám
+ *               IdLoaiKham:
+ *                 type: string
+ *                 description: ID loại khám
+ *               
+ *               # Thông tin địa chỉ
+ *               MaTinh:
+ *                 type: string
+ *                 description: Mã tỉnh
+ *               TenTinh:
+ *                 type: string
+ *                 description: Tên tỉnh
+ *               IdTinhThanh:
+ *                 type: string
+ *                 description: ID tỉnh thành
+ *               MaXa:
+ *                 type: string
+ *                 description: Mã xã
+ *               TenXa:
+ *                 type: string
+ *                 description: Tên xã
+ *               IdXaPhuong:
+ *                 type: string
+ *                 description: ID xã phường
+ *               
+ *               # Thông tin khác
+ *               IdDanToc:
+ *                 type: string
+ *                 description: ID dân tộc
+ *               TenDanToc:
+ *                 type: string
+ *                 description: Tên dân tộc
+ *               IdQuocTich:
+ *                 type: string
+ *                 description: ID quốc tịch
+ *               IdKhoaKham:
+ *                 type: string
+ *                 description: ID khoa khám
+ *               IdNgheNghiep:
+ *                 type: string
+ *                 description: ID nghề nghiệp
+ *               TenNgheNghiep:
+ *                 type: string
+ *                 description: Tên nghề nghiệp
+ *               IdCanBoDonTiep:
+ *                 type: string
+ *                 description: ID cán bộ đón tiếp
+ *               IdBenhVien:
+ *                 type: string
+ *                 description: ID bệnh viện
+ *               
+ *               # Thông tin lịch khám
  *               exam_type:
  *                 type: string
  *                 enum: [BHYT, DV]
@@ -126,10 +212,13 @@ const checkBHYTCard = async (req, res) => {
  *               exam_date:
  *                 type: string
  *                 format: date
+ *                 description: Ngày khám
  *               exam_time:
  *                 type: string
+ *                 description: Giờ khám
  *               symptoms:
  *                 type: string
+ *                 description: Triệu chứng (không bắt buộc)
  *               IsDonTiepCCCD:
  *                 type: boolean
  *                 description: Đánh dấu đơn tiếp CCCD

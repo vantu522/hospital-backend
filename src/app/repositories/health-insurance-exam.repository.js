@@ -27,15 +27,15 @@ const findMaxOrderNumber = async (exam_date) => {
 
 // Search với pagination và indexes
 const findByDateRange = async (startDate, endDate, options = {}) => {
-  const { page = 1, limit = 20, phongKham, status } = options;
+  const { page = 1, limit = 20, IdPhongKham, status } = options;
   const skip = (page - 1) * limit;
   
   const filter = { exam_date: { $gte: startDate, $lte: endDate } };
-  if (phongKham) filter.phongKham = phongKham;
+  if (IdPhongKham) filter.IdPhongKham = IdPhongKham;
   if (status) filter.status = status;
   
   return HealthInsuranceExam.find(filter)
-    .populate('phongKham', 'ten')
+    .populate('IdPhongKham', 'ten')
     .sort({ exam_date: -1, exam_time: -1 })
     .skip(skip)
     .limit(limit)

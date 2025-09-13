@@ -9,7 +9,33 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   GioiTinh: { type: String, required: true, enum: ['Nam', 'Nữ', 'Khác'] },
   DiaChi: { type: String, required: true, trim: true },
   BHYT: { type: String, trim: true }, // BHYT 
-  phongKham: { type: String, ref: 'PhongKham', required: true },
+  IdPhongKham: { type: String, ref: 'PhongKham', required: true },
+  
+  // Thông tin phòng khám
+  MaPhongKham: { type: String, required: true, trim: true },
+  TenPhongKham: { type: String, required: true, trim: true },
+  
+  // Thông tin loại khám
+  IdLoaiKham: { type: String, required: true, trim: true },
+  
+  // Thông tin địa chỉ
+  MaTinh: { type: String, required: true, trim: true },
+  TenTinh: { type: String, required: true, trim: true },
+  IdTinhThanh: { type: String, required: true, trim: true },
+  MaXa: { type: String, required: true, trim: true },
+  TenXa: { type: String, required: true, trim: true },
+  IdXaPhuong: { type: String, required: true, trim: true },
+  
+  // Thông tin khác
+  IdDanToc: { type: String, required: true, trim: true },
+  TenDanToc: { type: String, required: true, trim: true },
+  IdQuocTich: { type: String, required: true, trim: true },
+  IdKhoaKham: { type: String, required: true, trim: true },
+  IdNgheNghiep: { type: String, required: true, trim: true },
+  TenNgheNghiep: { type: String, required: true, trim: true },
+  IdCanBoDonTiep: { type: String, required: true, trim: true },
+  IdBenhVien: { type: String, required: true, trim: true },
+  
   exam_type: {
     type: String,
     enum: ['BHYT', 'DV'],
@@ -20,7 +46,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
       ref: 'ScheduleSlot',
       required: true,
   },
-  IsDonTiepCCCD: { type: Boolean, default: false },
+  IsDonTiepCCCD: { type: Boolean, required: true },
   
   exam_date: { type: Date, required: true },
   exam_time: { type: String, required: true },
@@ -33,7 +59,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
 // Performance indexes
 HealthInsuranceExamSchema.index({ order_number: -1 }); // Cho việc tìm max order
 HealthInsuranceExamSchema.index({ exam_date: 1, status: 1 }); // Cho search theo ngày và status
-HealthInsuranceExamSchema.index({ phongKham: 1, exam_date: 1 }); // Cho filter theo phòng khám
+HealthInsuranceExamSchema.index({ IdPhongKham: 1, exam_date: 1 }); // Cho filter theo phòng khám
 HealthInsuranceExamSchema.index({ BHYT: 1 }); // Cho check BHYT
 HealthInsuranceExamSchema.index({ CCCD: 1 }); // Cho search theo CCCD
 
