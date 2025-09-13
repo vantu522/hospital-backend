@@ -643,7 +643,8 @@ class HealthInsuranceExamService {
         // Thêm trường IsBHYT và IsDungTuyen khi có BHYT
         ...(dmBHYT && {
           IsBHYT: true,
-          IsDungTuyen: true
+          IsDungTuyen: true,
+          MaDoiTuongKCB: "3.3"
         }),
         
         // Thông tin phòng khám
