@@ -654,13 +654,25 @@ class HealthInsuranceExamService {
         IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
         SoNha: exam.SoNha || "236A",
         // Thông tin liên hệ
-        DienThoai: exam.DienThoai ,
-        DiaChi: exam.DiaChi ,
+        DienThoai: exam.DienThoai,
+        DiaChi: exam.DiaChi,
         IsDonTiepCCCD: exam.IsDonTiepCCCD,
+        Tuoi: exam.Tuoi || 30,
+        // Lấy SoBHYT từ cache dmBHYT nếu có, nếu không thì lấy từ exam
+        SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
+        
+        // Log thông tin về SoBHYT để debug
+        ...((() => {
+          const bhytSource = dmBHYT ? 'cache' : 'exam';
+          const bhytValue = dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT;
+          console.log(`🏥 [HIS] SoBHYT (${bhytSource}): ${bhytValue || 'không có'}`);
+          return {};
+        })()),
         
         NgayDonTiep: formatDisplayTime(),
         Status: 0,
-        
+        IdCongKhamBanDau: "a9e068e7-1df4-4711-928e-30e9ed18502b",
+
         // Thông tin địa chỉ
         MaTinh: exam.MaTinh || "01",
         TenTinh: exam.TenTinh || "Thành phố Hà Nội",
