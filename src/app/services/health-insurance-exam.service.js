@@ -637,79 +637,56 @@ class HealthInsuranceExamService {
       }
       
       // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
-      const payload = {
-        // Thông tin BHYT chỉ được thêm khi đủ điều kiện: là BHYT và có dữ liệu hợp lệ
-        ...(exam.exam_type === 'BHYT' && dmBHYT ? { DmBHYT: dmBHYT } : { DmBHYT: null }),
-        
-        HoTen: exam.HoTen,
-        NgaySinh: formatDisplayDate(exam.NgaySinh),
+      const basePayload = {
         GioiTinh: exam.GioiTinh === 'Nam',
-        
-        // Thêm trường IsBHYT và các trường liên quan dựa vào loại khám
-        ...(exam.exam_type === 'BHYT' && dmBHYT ? {
-          IsBHYT: true,
-          IsDungTuyen: true,
-          MaDoiTuongKCB: "3.3"  // Mã đối tượng khám chữa bệnh
-        } : {
-          MaDoiTuongKCB: "9", // Mã đối tượng khám chữa bệnh
-          
-        }),
-        
-        // Thông tin phòng khám
-        IdPhongKham: exam.IdPhongKham || "13e4be91-38ff-4403-b07a-912e7995a259",
-        MaPhongKham: exam.MaPhongKham || "K02.03.A",
-        TenPhongKham: exam.TenPhongKham || "Phòng Khám Đái Tháo Đường 236A",
-        IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
-        SoNha: exam.SoNha || "236A",
-        // Thông tin liên hệ
-        DienThoai: exam.DienThoai,
-        DiaChi: exam.DiaChi,
-        IsDonTiepCCCD: exam.IsDonTiepCCCD,
-        CMND: exam.CCCD,
-        IsCCCD: !!exam.CCCD, // Set IsCCCD = true nếu CMND không null, false nếu null
-        CMNDNoiCap: null,
-        CMNDNgayCap: "Invalid Date",
-        Tuoi: exam.Tuoi || "18",
-        // Chỉ sử dụng SoBHYT từ cache khi exam_type là BHYT
-        SoBHYT: exam.exam_type === 'BHYT' ? (dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT) : '',
-        
-        // Log thông tin về SoBHYT để debug
-        ...((() => {
-          // Nếu không phải BHYT, log thông tin tương ứng
-          if (exam.exam_type !== 'BHYT') {
-            console.log(`🏥 [HIS] Không sử dụng SoBHYT vì exam_type là: ${exam.exam_type}`);
-            return {};
-          }
-          
-          const bhytSource = dmBHYT ? 'cache' : 'exam';
-          const bhytValue = dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT;
-          console.log(`🏥 [HIS] SoBHYT (${bhytSource}): ${bhytValue || 'không có'}`);
-          return {};
-        })()),
-        
-        NgayDonTiep: formatDisplayTime(),
-        Status: 0,
-        
-
-        // Thông tin địa chỉ
-        MaTinh: exam.MaTinh || "01",
-        TenTinh: exam.TenTinh || "Thành phố Hà Nội",
-        IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
-        MaXa: exam.MaXa || "00118",
-        TenXa: exam.TenXa || "Phường Bồ Đề",
-        IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
-        IdKhoaDonTiep: "cee9a4d9-c3d4-4712-b49d-82d2f6755cfc",
         IdDanToc: exam.IdDanToc || "5cdeb1cd-bd45-4846-ae11-222fd111415c",
         TenDanToc: exam.TenDanToc || "Thái",
         IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
+        MaDoiTuongKCB: exam.exam_type === 'BHYT' ? "3.3" : "9",
+        NgayKham: formatDisplayTime(),
+        MaTinh: exam.MaTinh || "01",
+        TenTinh: exam.TenTinh || "Thành phố Hà Nội",
+        IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
+        IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
+        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
         IdKhoaKham: exam.IdKhoaKham || "43871a8e-9d9f-4672-91aa-ab6ce2526c7b",
+        IsDonTiepCCCD: !!exam.CCCD,
+        MaXa: exam.MaXa || "00118",
+        TenXa: exam.TenXa || "Phường Bồ Đề",
+        MaPhongKham: exam.MaPhongKham || "K02.03.A",
+        TenPhongKham: exam.TenPhongKham || "Phòng Khám Đái Tháo Đường 236A",
+        IdPhongKham: exam.IdPhongKham || "13e4be91-38ff-4403-b07a-912e7995a259",
+        IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
+        HoTen: exam.HoTen,
+        DienThoai: exam.DienThoai,
+        SoNha: exam.SoNha || "236A",
         IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
-        IdCanBoDonTiep:"3923362b-5ec4-4d11-ae0f-684001f67748",
-        IdCongKhamBanDau: exam.IdCongKhamBanDau || "a9e068e7-1df4-4711-928e-30e9ed18502b",
-        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
-        IsDatKhamTuXa: false,
+        NgaySinh: formatDisplayDate(exam.NgaySinh),
+        DiaChi: exam.DiaChi,
+        IdCanBoDonTiep: "3923362b-5ec4-4d11-ae0f-684001f67748",
+        NgayDonTiep: formatDisplayTime(),
+        Status: 0
       };
+      
+      // Nếu là BHYT, thêm các trường bổ sung
+      const payload = exam.exam_type === 'BHYT' 
+        ? {
+            ...basePayload,
+            // Thông tin BHYT chỉ được thêm khi có dữ liệu hợp lệ
+            ...(dmBHYT && { DmBHYT: dmBHYT }),
+            // Thêm các trường bắt buộc cho BHYT
+            IsBHYT: !!dmBHYT,
+            IsDungTuyen: !!dmBHYT,
+            SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT || '',
+            CMND: exam.CCCD,
+            IsCCCD: !!exam.CCCD,
+            IdCongKhamBanDau: exam.IdCongKhamBanDau || "a9e068e7-1df4-4711-928e-30e9ed18502b",
+            IsDatKhamTuXa: false,
+            // Các trường phụ thêm cho BHYT nếu cần
+            IdKhoaDonTiep: "cee9a4d9-c3d4-4712-b49d-82d2f6755cfc"
+          }
+        : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
       // Log đầy đủ payload để debug
       console.log('🏥 [HIS] Chi tiết payload gửi lên HIS:', JSON.stringify(payload, null, 2));
