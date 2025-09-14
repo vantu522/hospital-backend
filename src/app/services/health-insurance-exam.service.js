@@ -529,7 +529,8 @@ class HealthInsuranceExamService {
       
       // Định dạng ngày giờ cho tất cả các trường ngày tháng
       // FORMAT: HH:MM mm/dd/yyyy (giờ:phút tháng/ngày/năm) theo yêu cầu API HIS
-      const formatDisplayDateTime = (date) => {
+      // Ngày sinh chỉ cần dạng mm/dd/yyyy (không cần giờ)
+      const formatDisplayDateTime = (date, showTimeComponent = true) => {
         if (!date) return '';
         try {
           const d = date instanceof Date ? date : new Date(date);
@@ -537,6 +538,13 @@ class HealthInsuranceExamService {
           const month = String(d.getMonth() + 1).padStart(2, '0');
           const day = String(d.getDate()).padStart(2, '0');
           const year = d.getFullYear();
+          
+          // Nếu không cần hiển thị giờ (chỉ ngày), trả về định dạng MM/DD/YYYY
+          if (!showTimeComponent) {
+            return `${month}/${day}/${year}`;
+          }
+          
+          // Nếu cần hiển thị cả giờ, trả về định dạng HH:MM MM/DD/YYYY
           const hours = String(d.getHours()).padStart(2, '0');
           const minutes = String(d.getMinutes()).padStart(2, '0');
           return `${hours}:${minutes} ${month}/${day}/${year}`;
@@ -645,7 +653,7 @@ class HealthInsuranceExamService {
         SoNha: exam.SoNha || "236A",
         IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
-        NgaySinh: formatDisplayDateTime(exam.NgaySinh),
+        NgaySinh: formatDisplayDateTime(exam.NgaySinh, false),
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: "3923362b-5ec4-4d11-ae0f-684001f67748",
         NgayDonTiep: formatDisplayDateTime(new Date()),
