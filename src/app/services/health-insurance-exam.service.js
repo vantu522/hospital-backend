@@ -566,85 +566,93 @@ class HealthInsuranceExamService {
       const PhongKham = (await import('../../models/phong-kham.model.js')).default;
       const clinic = await PhongKham.findById(exam.IdPhongKham).lean();
       
-      // Lấy thông tin BHYT từ cache nếu có
+      // Lấy thông tin BHYT từ cache nếu có và chỉ khi type là BHYT
       let dmBHYT = null;
       
-      // Log thông tin về cache BHYT hiện tại
-      console.log('🔍 [BHYT_CACHE] Thông tin cache BHYT hiện tại:');
-      console.log('   - Tổng số cache:', Object.keys(this.bhytResultCache).length);
-      console.log('   - Các khóa có trong cache:', Object.keys(this.bhytResultCache));
-      
-      // Thử tìm dữ liệu BHYT từ cả trường BHYT và CCCD
+      // Lưu BHYT và CCCD keys để xử lý cache sau khi push lên HIS
       const bhytKey = exam.BHYT;
       const cccdKey = exam.CCCD;
       
-      console.log('   - Đang tìm mã thẻ BHYT:', bhytKey);
-      console.log('   - Đang tìm mã CCCD:', cccdKey);
-      console.log('   - BHYT có tồn tại trong cache:', !!this.bhytResultCache[bhytKey]);
-      console.log('   - CCCD có tồn tại trong cache:', !!this.bhytResultCache[cccdKey]);
-      
-      // Kiểm tra trường BHYT trước
-      if (bhytKey && this.bhytResultCache[bhytKey]) {
-        try {
-          // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
-          const cachedData = this.bhytResultCache[bhytKey];
-          
-          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ BHYT:', JSON.stringify(cachedData, null, 2));
-          
-          // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
-          if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
-            dmBHYT = cachedData;
-            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT):', bhytKey);
-          } else {
-            console.warn('🏥 [HIS] Dữ liệu BHYT cache không đúng định dạng, bỏ qua');
-            console.warn('🏥 [HIS] Chi tiết dữ liệu:', 
-              cachedData ? `Loại: ${typeof cachedData}, Có SoBHYT: ${!!cachedData.SoBHYT}, Có HoVaTen: ${!!cachedData.HoVaTen}` : 'null');
+      // Chỉ tìm thông tin BHYT khi exam_type là 'BHYT'
+      if (exam.exam_type === 'BHYT') {
+        // Log thông tin về cache BHYT hiện tại
+        console.log('🔍 [BHYT_CACHE] Thông tin cache BHYT hiện tại:');
+        console.log('   - Tổng số cache:', Object.keys(this.bhytResultCache).length);
+        console.log('   - Các khóa có trong cache:', Object.keys(this.bhytResultCache));
+        
+        console.log('   - Đang tìm mã thẻ BHYT:', bhytKey);
+        console.log('   - Đang tìm mã CCCD:', cccdKey);
+        console.log('   - BHYT có tồn tại trong cache:', !!this.bhytResultCache[bhytKey]);
+        console.log('   - CCCD có tồn tại trong cache:', !!this.bhytResultCache[cccdKey]);
+        
+        // Kiểm tra trường BHYT trước
+        if (bhytKey && this.bhytResultCache[bhytKey]) {
+          try {
+            // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
+            const cachedData = this.bhytResultCache[bhytKey];
+            
+            console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ BHYT:', JSON.stringify(cachedData, null, 2));
+            
+            // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
+            if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
+              dmBHYT = cachedData;
+              console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT):', bhytKey);
+            } else {
+              console.warn('🏥 [HIS] Dữ liệu BHYT cache không đúng định dạng, bỏ qua');
+              console.warn('🏥 [HIS] Chi tiết dữ liệu:', 
+                cachedData ? `Loại: ${typeof cachedData}, Có SoBHYT: ${!!cachedData.SoBHYT}, Có HoVaTen: ${!!cachedData.HoVaTen}` : 'null');
+            }
+          } catch (error) {
+            console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã BHYT):', error.message);
           }
-        } catch (error) {
-          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã BHYT):', error.message);
-        }
-      } 
-      
-      // Nếu không tìm thấy từ BHYT, thử tìm từ CCCD
-      if (!dmBHYT && cccdKey && this.bhytResultCache[cccdKey]) {
-        try {
-          // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
-          const cachedData = this.bhytResultCache[cccdKey];
-          
-          console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ CCCD:', JSON.stringify(cachedData, null, 2));
-          
-          // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
-          if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
-            dmBHYT = cachedData;
-            console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD):', cccdKey);
-          } else {
-            console.warn('🏥 [HIS] Dữ liệu BHYT cache từ CCCD không đúng định dạng, bỏ qua');
+        } 
+        
+        // Nếu không tìm thấy từ BHYT, thử tìm từ CCCD
+        if (!dmBHYT && cccdKey && this.bhytResultCache[cccdKey]) {
+          try {
+            // Lấy dữ liệu từ cache và đảm bảo nó là đối tượng hợp lệ
+            const cachedData = this.bhytResultCache[cccdKey];
+            
+            console.log('🔍 [BHYT_CACHE] Dữ liệu cache tìm thấy từ CCCD:', JSON.stringify(cachedData, null, 2));
+            
+            // Kiểm tra xem dữ liệu có phải là đối tượng và có thuộc tính cần thiết không
+            if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
+              dmBHYT = cachedData;
+              console.log('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD):', cccdKey);
+            } else {
+              console.warn('🏥 [HIS] Dữ liệu BHYT cache từ CCCD không đúng định dạng, bỏ qua');
+            }
+          } catch (error) {
+            console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã CCCD):', error.message);
           }
-        } catch (error) {
-          console.error('❌ [HIS] Lỗi khi xử lý dữ liệu BHYT từ cache (mã CCCD):', error.message);
         }
-      }
-      
-      // Nếu vẫn không tìm thấy, log thông báo
-      if (!dmBHYT && (bhytKey || cccdKey)) {
-        console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache cho cả BHYT và CCCD');
-        console.log('🏥 [HIS] Các mã thẻ hiện có trong cache:', Object.keys(this.bhytResultCache).join(', ') || 'Không có');
+        
+        // Nếu vẫn không tìm thấy, log thông báo
+        if (!dmBHYT && (bhytKey || cccdKey)) {
+          console.log('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache cho cả BHYT và CCCD');
+          console.log('🏥 [HIS] Các mã thẻ hiện có trong cache:', Object.keys(this.bhytResultCache).join(', ') || 'Không có');
+        }
+      } else {
+        console.log('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là:', exam.exam_type);
       }
       
       // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
       const payload = {
-        // Chỉ thêm DmBHYT vào payload nếu có dữ liệu hợp lệ
-        ...(dmBHYT && { DmBHYT: dmBHYT }),
+        // Thông tin BHYT chỉ được thêm khi đủ điều kiện: là BHYT và có dữ liệu hợp lệ
+        ...(exam.exam_type === 'BHYT' && dmBHYT ? { DmBHYT: dmBHYT } : { DmBHYT: null }),
         
         HoTen: exam.HoTen,
         NgaySinh: formatDisplayDate(exam.NgaySinh),
         GioiTinh: exam.GioiTinh === 'Nam',
         
-        // Thêm trường IsBHYT và IsDungTuyen khi có BHYT
-        ...(dmBHYT && {
+        // Thêm trường IsBHYT và các trường liên quan dựa vào loại khám
+        ...(exam.exam_type === 'BHYT' && dmBHYT ? {
           IsBHYT: true,
           IsDungTuyen: true,
-          MaDoiTuongKCB: "3.3"
+          MaDoiTuongKCB: "3.3"  // Mã đối tượng khám chữa bệnh
+        } : {
+          MaDoiTuongKCB: "9", // Mã đối tượng khám chữa bệnh
+          
         }),
         
         // Thông tin phòng khám
@@ -658,13 +666,21 @@ class HealthInsuranceExamService {
         DiaChi: exam.DiaChi,
         IsDonTiepCCCD: exam.IsDonTiepCCCD,
         CMND: exam.CCCD,
+        IsCCCD: !!exam.CCCD, // Set IsCCCD = true nếu CMND không null, false nếu null
         CMNDNoiCap: null,
         CMNDNgayCap: "Invalid Date",
         Tuoi: exam.Tuoi || "18",
-        SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
+        // Chỉ sử dụng SoBHYT từ cache khi exam_type là BHYT
+        SoBHYT: exam.exam_type === 'BHYT' ? (dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT) : '',
         
         // Log thông tin về SoBHYT để debug
         ...((() => {
+          // Nếu không phải BHYT, log thông tin tương ứng
+          if (exam.exam_type !== 'BHYT') {
+            console.log(`🏥 [HIS] Không sử dụng SoBHYT vì exam_type là: ${exam.exam_type}`);
+            return {};
+          }
+          
           const bhytSource = dmBHYT ? 'cache' : 'exam';
           const bhytValue = dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT;
           console.log(`🏥 [HIS] SoBHYT (${bhytSource}): ${bhytValue || 'không có'}`);
@@ -730,6 +746,24 @@ class HealthInsuranceExamService {
         error: error.message,
         details: error.response?.data || {}
       };
+    } finally {
+      // Xóa cache BHYT sau khi đẩy lên HIS (thành công hoặc thất bại)
+      const bhytKey = exam.BHYT;
+      const cccdKey = exam.CCCD;
+      
+      if (bhytKey || cccdKey) {
+        if (bhytKey && this.bhytResultCache[bhytKey]) {
+          delete this.bhytResultCache[bhytKey];
+          console.log('🧹 [BHYT_CACHE] Đã xóa cache BHYT sau khi push lên HIS:', bhytKey);
+        }
+        
+        if (cccdKey && this.bhytResultCache[cccdKey]) {
+          delete this.bhytResultCache[cccdKey];
+          console.log('🧹 [BHYT_CACHE] Đã xóa cache CCCD sau khi push lên HIS:', cccdKey);
+        }
+        
+        console.log('🧹 [BHYT_CACHE] Số lượng mã thẻ còn lại trong cache:', Object.keys(this.bhytResultCache).length);
+      }
     }
   }
 }
