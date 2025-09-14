@@ -106,6 +106,11 @@ const validateInsuranceExam = (req, res, next) => {
     errors.push('Tên nghề nghiệp không được để trống');
   }
   
+  // Thông tin cổng khám
+  if (!data.IdCongKhamBanDau || !data.IdCongKhamBanDau.trim()) {
+    errors.push('ID cổng khám ban đầu không được để trống');
+  }
+  
   //if(!data.SoNha || !data.SoNha.trim()) {
     //errors.push('Số nhà không được để trống');
   //}
