@@ -680,15 +680,39 @@ class HealthInsuranceExamService {
       console.log('🏥 [HIS] Chi tiết payload gửi lên HIS:', JSON.stringify(payload, null, 2));
       
       
-      // 5. Gọi API với token trong header
+      // 5. Gọi API với token trong header và timeout hợp lý
       const response = await axios.post(API_PUSH_TO_HIS_URL, payload, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000 // Timeout 30s
       });
       
+      // Kiểm tra response có đúng định dạng không
       console.log('✅ [HIS] Phản hồi từ API HIS:', response.status, response.statusText);
+      console.log('✅ [HIS] Data phản hồi:', JSON.stringify(response.data, null, 2));
+      
+      // Kiểm tra nếu response có chứa mã lỗi nội bộ từ API
+      if (response.data && response.data.statusCode && response.data.statusCode !== 200) {
+        console.error('❌ [HIS] API trả về mã lỗi:', response.data.statusCode);
+        return {
+          success: false,
+          error: `API HIS trả về mã lỗi: ${response.data.statusCode}`,
+          details: response.data
+        };
+      }
+      
+      // Kiểm tra các trường bắt buộc trong response
+      if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
+        console.error('❌ [HIS] API trả về dữ liệu rỗng');
+        return {
+          success: false,
+          error: 'API HIS trả về dữ liệu rỗng',
+          details: response.data
+        };
+      }
+      
       console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
       
       // 6. Trả về kết quả
@@ -697,19 +721,67 @@ class HealthInsuranceExamService {
         data: response.data
       };
     } catch (error) {
-      // Log lỗi ngắn gọn nhưng đầy đủ thông tin quan trọng
+      // Log lỗi chi tiết
       console.error(`❌ [HIS] Lỗi: ${error.message} | Bệnh nhân: ${exam.HoTen} (ID: ${exam._id})`);
       
-      // Log dữ liệu response lỗi từ server nếu có
-      if (error.response?.data) {
-        console.error('❌ [HIS] Data lỗi:', JSON.stringify(error.response.data, null, 2));
+      // Phân loại lỗi để dễ debug
+      if (error.code === 'ECONNABORTED') {
+        console.error('❌ [HIS] Lỗi timeout khi kết nối đến API HIS');
+        return {
+          success: false,
+          error: 'Kết nối đến HIS bị timeout',
+          errorCode: 'TIMEOUT',
+          details: { message: error.message }
+        };
       }
       
-      // Không throw lỗi ở đây để không ảnh hưởng đến luồng chính
+      // Lỗi network
+      if (!error.response) {
+        console.error('❌ [HIS] Lỗi kết nối mạng:', error.message);
+        return {
+          success: false,
+          error: 'Không thể kết nối đến HIS',
+          errorCode: 'NETWORK',
+          details: { message: error.message }
+        };
+      }
+      
+      // Lỗi response từ server
+      if (error.response) {
+        console.error('❌ [HIS] Mã lỗi từ server:', error.response.status);
+        console.error('❌ [HIS] Data lỗi:', JSON.stringify(error.response.data, null, 2));
+        
+        // Phân loại theo mã HTTP
+        if (error.response.status === 401) {
+          return {
+            success: false,
+            error: 'Token xác thực không hợp lệ',
+            errorCode: 'AUTH',
+            details: error.response.data || {}
+          };
+        } else if (error.response.status === 400) {
+          return {
+            success: false,
+            error: 'Dữ liệu gửi đi không hợp lệ',
+            errorCode: 'BAD_REQUEST',
+            details: error.response.data || {}
+          };
+        } else {
+          return {
+            success: false,
+            error: `Lỗi server HIS (${error.response.status})`,
+            errorCode: 'SERVER',
+            details: error.response.data || {}
+          };
+        }
+      }
+      
+      // Lỗi không xác định
       return {
         success: false,
         error: error.message,
-        details: error.response?.data || {}
+        errorCode: 'UNKNOWN',
+        details: {}
       };
     } finally {
       // Xóa cache BHYT sau khi đẩy lên HIS (thành công hoặc thất bại)
