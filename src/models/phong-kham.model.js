@@ -43,6 +43,11 @@ const phongKhamSchema = new mongoose.Schema(
     IdKhoaKham: {
       type: String,
       required: true,
+    },
+    
+    IdCongKhamBanDau: {
+      type: String,
+      required: false,
     }
   },
   {

@@ -194,9 +194,12 @@ class ImportController {
         const ten = row["Tên"];
         const diaChi = row["Địa chỉ"];
         const capQuanLi = row["Cấp quản lý"];
+        const idKhoaKham = row["Mã Khoa Khám"];
+        const idLoaiKham = row["Mã Loại Khám"];
+        const idCongKhamBanDau = row["Mã Cổng Khám Ban Đầu"];
 
-        if (!id || !ma || !ten) {
-          throw new Error(`Dòng ${index + 2}: Thiếu thông tin ID, Mã hoặc Tên`);
+        if (!id || !ma || !ten || !idKhoaKham || !idLoaiKham) {
+          throw new Error(`Dòng ${index + 2}: Thiếu thông tin ID, Mã, Tên, Mã Khoa Khám hoặc Mã Loại Khám`);
         }
 
         return {
@@ -205,6 +208,9 @@ class ImportController {
           ten: ten.toString().trim(),
           dia_chi: diaChi ? diaChi.toString().trim() : '',
           cap_quan_li: capQuanLi ? capQuanLi.toString().trim() : 'Phòng',
+          IdKhoaKham: idKhoaKham.toString().trim(),
+          IdLoaiKham: idLoaiKham.toString().trim(),
+          IdCongKhamBanDau: idCongKhamBanDau ? idCongKhamBanDau.toString().trim() : null,
           is_active: true
         };
       });
@@ -548,7 +554,10 @@ class ImportController {
           "Mã": "P101",
           "Tên": "Phòng khám Nội khoa 101",
           "Địa chỉ": "Tầng 1 - Khu A",
-          "Cấp quản lý": "Phòng"
+          "Cấp quản lý": "Phòng",
+          "Mã Khoa Khám": "KHOA001", 
+          "Mã Loại Khám": "LK001",
+          "Mã Cổng Khám Ban Đầu": "CK001"
         }
       ];
 
