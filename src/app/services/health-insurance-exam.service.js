@@ -527,42 +527,22 @@ class HealthInsuranceExamService {
       
       console.log('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
       
-      // Định dạng ngày tháng cho hiển thị
-      // FORMAT: mm/dd/yyyy (tháng/ngày/năm) theo yêu cầu của API HIS
-      const formatDisplayDate = (date) => {
+      // Định dạng ngày giờ cho tất cả các trường ngày tháng
+      // FORMAT: HH:MM mm/dd/yyyy (giờ:phút tháng/ngày/năm) theo yêu cầu API HIS
+      const formatDisplayDateTime = (date) => {
         if (!date) return '';
-        
         try {
-          // Chuyển đổi sang đối tượng Date nếu không phải
           const d = date instanceof Date ? date : new Date(date);
-          
-          // Kiểm tra date hợp lệ
-          if (isNaN(d.getTime())) {
-            console.error('❌ [HIS] Ngày không hợp lệ:', date);
-            return '';
-          }
-          
-          // Format chính xác theo mm/dd/yyyy (tháng/ngày/năm) theo yêu cầu API HIS
-          return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-        } catch (error) {
-          console.error('❌ [HIS] Lỗi chuyển đổi ngày tháng:', error.message);
+          if (isNaN(d.getTime())) return '';
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const year = d.getFullYear();
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          return `${hours}:${minutes} ${month}/${day}/${year}`;
+        } catch {
           return '';
         }
-      };
-      
-      // Format ngày giờ hiện tại cho HIS
-      // FORMAT: HH:MM mm/dd/yyyy (giờ:phút tháng/ngày/năm) theo yêu cầu API HIS
-      const formatDisplayTime = () => {
-        const now = new Date();
-        // Chuẩn hóa thành mm/dd/yyyy (tháng/ngày/năm)
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        
-        // Định dạng cuối cùng HH:MM mm/dd/yyyy cho API HIS
-        return `${hours}:${minutes} ${month}/${day}/${year}`;
       };
       
       // Lấy phòng khám
@@ -646,7 +626,7 @@ class HealthInsuranceExamService {
         TenDanToc: exam.TenDanToc || "Thái",
         IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
         MaDoiTuongKCB: exam.exam_type === 'BHYT' ? "3.3" : "9",
-        NgayKham: formatDisplayTime(),
+        NgayKham: formatDisplayDateTime(new Date()),
         MaTinh: exam.MaTinh || "01",
         TenTinh: exam.TenTinh || "Thành phố Hà Nội",
         IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
@@ -665,10 +645,10 @@ class HealthInsuranceExamService {
         SoNha: exam.SoNha || "236A",
         IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
-        NgaySinh: formatDisplayDate(exam.NgaySinh),
+        NgaySinh: formatDisplayDateTime(exam.NgaySinh),
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: "3923362b-5ec4-4d11-ae0f-684001f67748",
-        NgayDonTiep: formatDisplayTime(),
+        NgayDonTiep: formatDisplayDateTime(new Date()),
         Status: 0
       };
       
