@@ -657,8 +657,10 @@ class HealthInsuranceExamService {
         DienThoai: exam.DienThoai,
         DiaChi: exam.DiaChi,
         IsDonTiepCCCD: exam.IsDonTiepCCCD,
+        CMND: exam.CCCD,
+        CMNDNoiCap: null,
+        CMNDNgayCap: "Invalid Date",
         Tuoi: exam.Tuoi || "18",
-        // Lấy SoBHYT từ cache dmBHYT nếu có, nếu không thì lấy từ exam
         SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
         
         // Log thông tin về SoBHYT để debug
@@ -671,7 +673,7 @@ class HealthInsuranceExamService {
         
         NgayDonTiep: formatDisplayTime(),
         Status: 0,
-        IdCongKhamBanDau: "a9e068e7-1df4-4711-928e-30e9ed18502b",
+        
 
         // Thông tin địa chỉ
         MaTinh: exam.MaTinh || "01",
@@ -680,9 +682,6 @@ class HealthInsuranceExamService {
         MaXa: exam.MaXa || "00118",
         TenXa: exam.TenXa || "Phường Bồ Đề",
         IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
-        
-        // Thông tin khác
-        IdMucHuong: "06dcbb0f-3c5a-4ab9-b3fa-1a5d7dce1b73",
         IdKhoaDonTiep: "cee9a4d9-c3d4-4712-b49d-82d2f6755cfc",
         IdDanToc: exam.IdDanToc || "5cdeb1cd-bd45-4846-ae11-222fd111415c",
         TenDanToc: exam.TenDanToc || "Thái",
@@ -691,9 +690,9 @@ class HealthInsuranceExamService {
         IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
         IdCanBoDonTiep:"3923362b-5ec4-4d11-ae0f-684001f67748",
+        IdCongKhamBanDau: exam.IdCongKhamBanDau || "a9e068e7-1df4-4711-928e-30e9ed18502b",
         IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
-        IdNguonDonTiep: "00000000-0000-0000-0000-000000000000",
-        NgayKham: formatDisplayTime()
+        IsDatKhamTuXa: false,
       };
       
       // Log đầy đủ payload để debug
