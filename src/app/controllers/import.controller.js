@@ -195,8 +195,9 @@ class ImportController {
         const diaChi = row["Địa chỉ"];
         const capQuanLi = row["Cấp quản lý"];
         const idKhoaKham = row["Mã Khoa Khám"];
-        const idLoaiKham = row["Mã Loại Khám"];
         const idCongKhamBanDau = row["Mã Cổng Khám Ban Đầu"];
+        const idLoaiKham = row["Mã Loại Khám"];
+      
 
         if (!id || !ma || !ten || !idKhoaKham || !idLoaiKham) {
           throw new Error(`Dòng ${index + 2}: Thiếu thông tin ID, Mã, Tên, Mã Khoa Khám hoặc Mã Loại Khám`);

@@ -528,6 +528,7 @@ class HealthInsuranceExamService {
       console.log('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
       
       // Định dạng ngày tháng cho hiển thị
+      // FORMAT: mm/dd/yyyy (tháng/ngày/năm) theo yêu cầu của API HIS
       const formatDisplayDate = (date) => {
         if (!date) return '';
         
@@ -541,7 +542,7 @@ class HealthInsuranceExamService {
             return '';
           }
           
-          // Format thành mm/dd/yyyy
+          // Format chính xác theo mm/dd/yyyy (tháng/ngày/năm) theo yêu cầu API HIS
           return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
         } catch (error) {
           console.error('❌ [HIS] Lỗi chuyển đổi ngày tháng:', error.message);
@@ -549,17 +550,19 @@ class HealthInsuranceExamService {
         }
       };
       
+      // Format ngày giờ hiện tại cho HIS
+      // FORMAT: HH:MM mm/dd/yyyy (giờ:phút tháng/ngày/năm) theo yêu cầu API HIS
       const formatDisplayTime = () => {
         const now = new Date();
-        // Format thành HH:MM dd/MM/yyyy
-        const day = String(now.getDate()).padStart(2, '0');
+        // Chuẩn hóa thành mm/dd/yyyy (tháng/ngày/năm)
         const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
         const year = now.getFullYear();
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         
-        // Trả về định dạng HH:MM dd/MM/yyyy cho API HIS
-        return `${hours}:${minutes} ${day}/${month}/${year}`;
+        // Định dạng cuối cùng HH:MM mm/dd/yyyy cho API HIS
+        return `${hours}:${minutes} ${month}/${day}/${year}`;
       };
       
       // Lấy phòng khám
@@ -680,11 +683,8 @@ class HealthInsuranceExamService {
             IsDungTuyen: !!dmBHYT,
             SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT || '',
             CMND: exam.CCCD,
-            IsCCCD: !!exam.CCCD,
             IdCongKhamBanDau: exam.IdCongKhamBanDau || "a9e068e7-1df4-4711-928e-30e9ed18502b",
             IsDatKhamTuXa: false,
-            // Các trường phụ thêm cho BHYT nếu cần
-            IdKhoaDonTiep: "cee9a4d9-c3d4-4712-b49d-82d2f6755cfc"
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
