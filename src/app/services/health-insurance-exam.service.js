@@ -634,7 +634,6 @@ class HealthInsuranceExamService {
         TenDanToc: exam.TenDanToc || "Thái",
         IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
         MaDoiTuongKCB: exam.exam_type === 'BHYT' ? "3.3" : "9",
-        NgayKham: formatDisplayDateTime(new Date()),
         MaTinh: exam.MaTinh || "01",
         TenTinh: exam.TenTinh || "Thành phố Hà Nội",
         IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
@@ -656,6 +655,7 @@ class HealthInsuranceExamService {
         NgaySinh: formatDisplayDateTime(exam.NgaySinh, false),
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: "3923362b-5ec4-4d11-ae0f-684001f67748",
+        NgayKham: formatDisplayDateTime(new Date()),
         NgayDonTiep: formatDisplayDateTime(new Date()),
         Status: 0
       };
