@@ -1,12 +1,18 @@
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
 import axios from 'axios';
 import QRCode from 'qrcode';
-
+import https from 'https';
 
 class HealthInsuranceExamService {
+  //Khai báo agent 
+  agent = new https.Agent({
+    cert: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
+    key: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
+    rejectUnauthorized: false // dev, prod nên true
+  });
   // Cache kết quả check BHYT thành công (key: maThe)
   bhytResultCache = {};
-
+  
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
   convertBHYTToThirdParty(bhytData) {
     return {
@@ -469,13 +475,13 @@ class HealthInsuranceExamService {
     }
     
     try {
-      const { API_LOGIN_HIS_URL, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
+      const { API_LOGIN_HIS_333, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
       
-      if (!API_LOGIN_HIS_URL || !HIS_ACCOUNT || !HIS_PASSWORD) {
+      if (!API_LOGIN_HIS_333 || !HIS_ACCOUNT || !HIS_PASSWORD) {
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
       
-      console.log('🔑 [HIS] Đang lấy token mới từ:', API_LOGIN_HIS_URL);
+      console.log('🔑 [HIS] Đang lấy token mới từ:', API_LOGIN_HIS_333);
       
       // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
@@ -491,7 +497,7 @@ class HealthInsuranceExamService {
     
 
       // Gửi request với params và agent
-      const response = await axios.post(API_LOGIN_HIS_URL, params, { headers});
+      const response = await axios.post(API_LOGIN_HIS_333, params, { headers, httpsAgent: this.agent});
       
       
       console.log('✅ [HIS] Nhận phản hồi từ server HIS:', response.status);
@@ -523,8 +529,8 @@ class HealthInsuranceExamService {
       const token = await this.getHISToken();
       
       // 2. Lấy API URL từ biến môi trường
-      const { API_PUSH_TO_HIS_URL } = process.env;
-      if (!API_PUSH_TO_HIS_URL) {
+      const { API_PUSH_TO_HIS_333 } = process.env;
+      if (!API_PUSH_TO_HIS_333) {
         throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_333');
       }
       
@@ -657,7 +663,7 @@ class HealthInsuranceExamService {
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
         NgaySinh: formatDisplayDateTime(exam.NgaySinh, false),
         DiaChi: exam.DiaChi,
-        IdCanBoDonTiep:  "3923362b-5ec4-4d11-ae0f-684001f67748",
+        IdCanBoDonTiep: process.env.ID_CANBO_HIS||"3923362b-5ec4-4d11-ae0f-684001f67748",
         IdCongKhamBanDau: exam.IdCongKhamBanDau,
         NgayKham: formatDisplayDateTime(new Date()),
         NgayDonTiep: formatDisplayDateTime(new Date()),
@@ -684,11 +690,13 @@ class HealthInsuranceExamService {
       
       
       // 5. Gọi API với token trong header và timeout hợp lý
-      const response = await axios.post(API_PUSH_TO_HIS_URL, payload, {
+      const response = await axios.post(API_PUSH_TO_HIS_333, payload, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
+          
         },
+        httpsAgent: this.agent,
         timeout: 30000 // Timeout 30s
       });
       
