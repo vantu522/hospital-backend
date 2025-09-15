@@ -203,27 +203,54 @@ class HealthInsuranceExamService {
 
   // Hàm helper để tìm khung giờ tiếp theo
   const findNextAvailableSlot = (currentTime, templates) => {
+      // Format time đầu vào để đảm bảo định dạng HH:MM
+      const formatTime = (timeStr) => {
+        try {
+          const [h, m] = timeStr.split(':').map(Number);
+          return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        } catch (e) {
+          // Trường hợp lỗi, trả về chính định dạng đầu vào
+          return timeStr;
+        }
+      };
+      
       const toMinutes = t => {
         const [h, m] = t.split(':').map(Number);
         return h * 60 + m;
       };
-      const target = toMinutes(currentTime);
       
-      // Tìm khung giờ tiếp theo (sau thời gian yêu cầu)
+      // Format lại thời gian để đảm bảo định dạng đúng
+      const formattedCurrentTime = formatTime(currentTime);
+      const target = toMinutes(formattedCurrentTime);
+      
+      console.log(`🔍 [SLOT] Đang tìm khung giờ phù hợp cho thời điểm ${formattedCurrentTime} (${target} phút)`);
+      console.log(`🔍 [SLOT] Có ${templates.length} khung giờ mẫu khả dụng: `, templates.map(t => t.time).join(', '));
+      
+      // Nếu thời gian yêu cầu chính xác là một khung giờ, trả về khung giờ đó
+      const exactMatch = templates.find(tpl => tpl.time === formattedCurrentTime);
+      if (exactMatch) {
+        console.log(`✅ [SLOT] Tìm thấy khung giờ chính xác: ${exactMatch.time}`);
+        return exactMatch;
+      }
+      
+      // Sắp xếp templates theo thời gian tăng dần
+      const sortedTemplates = [...templates].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+      
+      // Tìm khung giờ tiếp theo sau thời gian yêu cầu
       let nextSlot = null;
-      let minTimeDiff = Infinity;
-      
-      for (const tpl of templates) {
+      for (const tpl of sortedTemplates) {
         const tplMinutes = toMinutes(tpl.time);
-        if (tplMinutes > target && (tplMinutes - target) < minTimeDiff) {
-          minTimeDiff = tplMinutes - target;
+        if (tplMinutes > target) {
           nextSlot = tpl;
+          console.log(`✅ [SLOT] Tìm thấy khung giờ tiếp theo: ${tpl.time} (sau ${tplMinutes - target} phút)`);
+          break; // Lấy khung giờ đầu tiên sau thời gian hiện tại
         }
       }
       
-      // ✅ Chỉ tìm khung giờ sau thời gian yêu cầu, không fallback về đầu
+      // Nếu không có khung giờ nào sau thời gian hiện tại, trả về null (hết khung giờ)
       if (!nextSlot) {
-        return null; // Không tìm thấy khung giờ nào phù hợp
+        console.log(`❌ [SLOT] Không tìm thấy khung giờ nào sau ${formattedCurrentTime}, đã hết khung giờ đặt khám`);
+        return null;
       }
       
       return nextSlot;
@@ -246,7 +273,7 @@ class HealthInsuranceExamService {
         // Receptionist: Tự động tìm khung giờ tiếp theo
         const foundTemplate = findNextAvailableSlot(exam_time, allTemplates);
         if (!foundTemplate) {
-          throw new Error('Không tìm thấy khung giờ mẫu nào phù hợp');
+          throw new Error('Đã hết khung giờ đặt khám trong ngày. Vui lòng chọn ngày khác.');
         }
         template = foundTemplate;
         adjustedTime = template.time;
@@ -353,8 +380,13 @@ class HealthInsuranceExamService {
 
     // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
-      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber(data.exam_date);
+      // Format ngày đúng
+      const examDate = new Date(data.exam_date);
+      console.log(`🔢 [CREATE_EXAM] Tạo lịch khám mới cho ngày: ${examDate.toLocaleDateString()} với status: ${data.status}`);
+      
+      const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber(examDate);
       data.order_number = maxOrder + 1;
+      console.log(`🔢 [CREATE_EXAM] Gán số thứ tự: ${data.order_number} cho lịch khám mới`);
     }
 
     // Parallel operations sau khi đã có order_number
@@ -425,8 +457,14 @@ class HealthInsuranceExamService {
       // Lấy max order number trước - lọc theo ngày hiện tại
       const today = new Date();
       today.setHours(0,0,0,0);
+      
+      console.log(`🔢 [CHECK_EXAM] Cập nhật status thành accept cho lịch khám ID: ${exam._id}`);
+      console.log(`🔢 [CHECK_EXAM] Tìm số thứ tự tiếp theo cho ngày: ${today.toLocaleDateString()}`);
+      
       const maxOrder = await healthInsuranceExamRepository.findMaxOrderNumber(today);
       const newOrderNumber = maxOrder + 1;
+      
+      console.log(`🔢 [CHECK_EXAM] Gán số thứ tự: ${newOrderNumber} cho lịch khám`);
       
       // Update exam với order number và status
       const updatedExam = await healthInsuranceExamRepository.updateOrderNumber(exam._id, newOrderNumber, 'accept');

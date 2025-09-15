@@ -8,11 +8,15 @@ const findById = async (id) => HealthInsuranceExam.findById(id); // Không dùng
 
 // Tìm max order number theo ngày (không phân biệt phòng)
 const findMaxOrderNumber = async (exam_date) => {
-  // Chỉ lấy records đã accept, cùng ngày
+  // Format ngày để đảm bảo đúng định dạng
   const startOfDay = new Date(exam_date);
   startOfDay.setHours(0,0,0,0);
   const endOfDay = new Date(exam_date);
   endOfDay.setHours(23,59,59,999);
+  
+  console.log(`🔢 [ORDER] Tìm số thứ tự cao nhất trong ngày: ${startOfDay.toLocaleDateString()}`);
+  
+  // Chỉ lấy records đã accept, cùng ngày
   const result = await HealthInsuranceExam.findOne(
     {
       status: 'accept',
@@ -22,7 +26,11 @@ const findMaxOrderNumber = async (exam_date) => {
     { order_number: 1 },
     { sort: { order_number: -1 } }
   ).lean();
-  return result?.order_number || 0;
+  
+  const maxOrder = result?.order_number || 0;
+  console.log(`🔢 [ORDER] Số thứ tự cao nhất tìm thấy: ${maxOrder}, STT tiếp theo: ${maxOrder + 1}`);
+  
+  return maxOrder;
 };
 
 // Search với pagination và indexes
