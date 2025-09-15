@@ -5,7 +5,7 @@ const ScheduleSlotService = {
     return await ScheduleSlot.create(data);
   },
   async getSlots() {
-  return await ScheduleSlot.find().populate('IdPhongKham');
+  return await ScheduleSlot.find();
   },
   async deleteSlot(id) {
     return await ScheduleSlot.findByIdAndDelete(id);

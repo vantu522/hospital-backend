@@ -43,7 +43,6 @@ const findByDateRange = async (startDate, endDate, options = {}) => {
   if (status) filter.status = status;
   
   return HealthInsuranceExam.find(filter)
-    .populate('IdPhongKham', 'ten')
     .sort({ exam_date: -1, exam_time: -1 })
     .skip(skip)
     .limit(limit)
