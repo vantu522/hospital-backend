@@ -1,6 +1,7 @@
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
 import axios from 'axios';
 import QRCode from 'qrcode';
+import https from 'https';
 
 class HealthInsuranceExamService {
   // Cache kết quả check BHYT thành công (key: maThe)
@@ -487,9 +488,11 @@ class HealthInsuranceExamService {
       const headers = {
         'Content-Type': 'application/x-www-form-urlencoded'
       };
+      const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+      // Gửi request với params và agent
+      const response = await axios.post(API_LOGIN_HIS_333, params, { headers, httpsAgent });
       
-      // Gửi request với params
-      const response = await axios.post(API_LOGIN_HIS_333, params, { headers });
       
       console.log('✅ [HIS] Nhận phản hồi từ server HIS:', response.status);
       
