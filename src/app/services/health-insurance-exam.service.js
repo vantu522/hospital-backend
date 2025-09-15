@@ -9,7 +9,7 @@ class HealthInsuranceExamService {
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
   convertBHYTToThirdParty(bhytData) {
     return {
-      "Domain": "01821",
+      "Domain": process.env.DOMAIN,
       SoBHYT: bhytData.maThe,
       HoVaTen: bhytData.hoTen,
       NgaySinh: bhytData.ngaySinh,
@@ -468,13 +468,13 @@ class HealthInsuranceExamService {
     }
     
     try {
-      const { API_LOGIN_HIS_URL, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
+      const { API_LOGIN_HIS_333, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
       
-      if (!API_LOGIN_HIS_URL || !HIS_ACCOUNT || !HIS_PASSWORD) {
+      if (!API_LOGIN_HIS_333 || !HIS_ACCOUNT || !HIS_PASSWORD) {
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
       
-      console.log('🔑 [HIS] Đang lấy token mới từ:', API_LOGIN_HIS_URL);
+      console.log('🔑 [HIS] Đang lấy token mới từ:', API_LOGIN_HIS_333);
       
       // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
@@ -489,7 +489,7 @@ class HealthInsuranceExamService {
       };
       
       // Gửi request với params
-      const response = await axios.post(API_LOGIN_HIS_URL, params, { headers });
+      const response = await axios.post(API_LOGIN_HIS_333, params, { headers });
       
       console.log('✅ [HIS] Nhận phản hồi từ server HIS:', response.status);
       
@@ -520,9 +520,9 @@ class HealthInsuranceExamService {
       const token = await this.getHISToken();
       
       // 2. Lấy API URL từ biến môi trường
-      const { API_PUSH_TO_HIS_URL } = process.env;
-      if (!API_PUSH_TO_HIS_URL) {
-        throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_URL');
+      const { API_PUSH_TO_HIS_333 } = process.env;
+      if (!API_PUSH_TO_HIS_333) {
+        throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_333');
       }
       
       console.log('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
@@ -630,31 +630,32 @@ class HealthInsuranceExamService {
       // 4. Cấu trúc dữ liệu theo yêu cầu của API HIS
       const basePayload = {
         GioiTinh: exam.GioiTinh === 'Nam',
-        IdDanToc: exam.IdDanToc || "5cdeb1cd-bd45-4846-ae11-222fd111415c",
-        TenDanToc: exam.TenDanToc || "Thái",
-        IdQuocTich: exam.IdQuocTich || "e28c648f-be25-4597-90ce-7ec40031625e",
+        IdDanToc: exam.IdDanToc,
+        TenDanToc: exam.TenDanToc,
+        IdQuocTich: exam.IdQuocTich,
         MaDoiTuongKCB: exam.exam_type === 'BHYT' ? "3.3" : "9",
-        MaTinh: exam.MaTinh || "01",
-        TenTinh: exam.TenTinh || "Thành phố Hà Nội",
-        IdTinhThanh: exam.IdTinhThanh || "746df3a2-6488-4cd4-8ec9-0fc21d497ca9",
-        IdXaPhuong: exam.IdXaPhuong || "a99edb8e-99cd-46fc-a931-850b7caa749e",
-        IdBenhVien: "5f2a991f-a74a-4d71-b183-5d18919d0957",
-        IdKhoaKham: exam.IdKhoaKham || "43871a8e-9d9f-4672-91aa-ab6ce2526c7b",
+        MaTinh: exam.MaTinh,
+        TenTinh: exam.TenTinh,
+        IdTinhThanh: exam.IdTinhThanh,
+        IdXaPhuong: exam.IdXaPhuong,
+        IdBenhVien: process.env.ID_BENHVIEN_HIS,
+        IdKhoaKham: exam.IdKhoaKham,
         IsDonTiepCCCD: !!exam.CCCD,
-        MaXa: exam.MaXa || "00118",
-        TenXa: exam.TenXa || "Phường Bồ Đề",
-        MaPhongKham: exam.MaPhongKham || "K02.03.A",
-        TenPhongKham: exam.TenPhongKham || "Phòng Khám Đái Tháo Đường 236A",
-        IdPhongKham: exam.IdPhongKham || "13e4be91-38ff-4403-b07a-912e7995a259",
-        IdLoaiKham: exam.IdLoaiKham || "fc8dba41-634a-4ec6-9451-c23106dc813a",
+        MaXa: exam.MaXa,
+        TenXa: exam.TenXa,
+        MaPhongKham: exam.MaPhongKham,
+        TenPhongKham: exam.TenPhongKham,
+        IdPhongKham: exam.IdPhongKham,
+        IdLoaiKham: exam.IdLoaiKham,
         HoTen: exam.HoTen,
         DienThoai: exam.DienThoai,
-        SoNha: exam.SoNha || "236A",
-        IdNgheNghiep: exam.IdNgheNghiep || "f39d6834-74a5-4aac-8603-2a26ab002023",
+        SoNha: exam.SoNha,
+        IdNgheNghiep: exam.IdNgheNghiep,
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
         NgaySinh: formatDisplayDateTime(exam.NgaySinh, false),
         DiaChi: exam.DiaChi,
-        IdCanBoDonTiep: "3923362b-5ec4-4d11-ae0f-684001f67748",
+        IdCanBoDonTiep: process.env.ID_CANBO_HIS,
+        IdCongKhamBanDau: exam.IdCongKhamBanDau,
         NgayKham: formatDisplayDateTime(new Date()),
         NgayDonTiep: formatDisplayDateTime(new Date()),
         Status: 0
@@ -669,9 +670,8 @@ class HealthInsuranceExamService {
             // Thêm các trường bắt buộc cho BHYT
             IsBHYT: !!dmBHYT,
             IsDungTuyen: !!dmBHYT,
-            SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT || '',
+            SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
             CMND: exam.CCCD,
-            IdCongKhamBanDau: exam.IdCongKhamBanDau || "a9e068e7-1df4-4711-928e-30e9ed18502b",
             IsDatKhamTuXa: false,
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
@@ -681,7 +681,7 @@ class HealthInsuranceExamService {
       
       
       // 5. Gọi API với token trong header và timeout hợp lý
-      const response = await axios.post(API_PUSH_TO_HIS_URL, payload, {
+      const response = await axios.post(API_PUSH_TO_HIS_333, payload, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -801,6 +801,108 @@ class HealthInsuranceExamService {
         
         console.log('🧹 [BHYT_CACHE] Số lượng mã thẻ còn lại trong cache:', Object.keys(this.bhytResultCache).length);
       }
+    }
+  }
+
+  // === Lấy tất cả lịch khám với phân trang ===
+  async getAllExams(options = {}) {
+    console.log('🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options:', options);
+    
+    try {
+      // Xử lý các tham số đầu vào
+      const queryOptions = {
+        page: options.page ? parseInt(options.page) : 1, // Mặc định trang 1
+        limit: options.limit ? parseInt(options.limit) : 10, // Mặc định 10 bản ghi/trang
+        sortBy: options.sortBy || 'createdAt', // Mặc định sắp xếp theo ngày tạo
+        sortOrder: -1, // Luôn sắp xếp từ mới đến cũ (giảm dần)
+        filters: {}
+      };
+      
+      // Xử lý các filter từ query params
+      if (options.status) queryOptions.filters.status = options.status;
+      if (options.exam_type) queryOptions.filters.exam_type = options.exam_type;
+      if (options.IdPhongKham) queryOptions.filters.IdPhongKham = options.IdPhongKham;
+      
+      // Xử lý tìm kiếm theo ngày khám
+      if (options.exam_date) {
+        const examDate = new Date(options.exam_date);
+        if (!isNaN(examDate.getTime())) {
+          // Tạo khoảng thời gian cho ngày (từ 00:00 đến 23:59:59)
+          const startDate = new Date(examDate);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const endDate = new Date(examDate);
+          endDate.setHours(23, 59, 59, 999);
+          
+          queryOptions.filters.exam_date = { $gte: startDate, $lte: endDate };
+        }
+      }
+      
+      // Gọi repository để lấy dữ liệu - trả về tất cả các trường trong model nguyên bản
+      const result = await healthInsuranceExamRepository.findAll(queryOptions);
+      
+      console.log(`✅ [EXAM_SERVICE] Lấy thành công ${result.data.length}/${result.total} lịch khám`);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám:', error.message);
+      throw new Error(`Không thể lấy danh sách lịch khám: ${error.message}`);
+    }
+  }
+  
+  // Helper method để thêm thông tin phòng khám vào danh sách lịch khám
+  // === Cập nhật thông tin lịch khám ===
+  async updateExam(id, data) {
+    console.log('🔄 [EXAM_SERVICE] Cập nhật lịch khám:', id);
+    
+    try {
+      // Kiểm tra xem lịch khám có tồn tại không
+      const exam = await healthInsuranceExamRepository.findById(id);
+      if (!exam) {
+        throw new Error('Không tìm thấy lịch khám');
+      }
+      
+      // Loại bỏ các trường không được phép cập nhật
+      const allowedUpdates = { 
+        ...data 
+      };
+      
+      // Không cho phép thay đổi một số trường quan trọng
+      delete allowedUpdates._id;
+      delete allowedUpdates.is_deleted;
+      delete allowedUpdates.created_at;
+      delete allowedUpdates.updated_at;
+      
+      // Cập nhật lịch khám
+      const updatedExam = await healthInsuranceExamRepository.update(id, allowedUpdates);
+      
+      console.log('✅ [EXAM_SERVICE] Cập nhật lịch khám thành công:', id);
+      return updatedExam;
+    } catch (error) {
+      console.error('❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám:', error.message);
+      throw new Error(`Không thể cập nhật lịch khám: ${error.message}`);
+    }
+  }
+  
+  // === Xóa lịch khám ===
+  async deleteExam(id) {
+    console.log('🗑️ [EXAM_SERVICE] Xóa lịch khám:', id);
+    
+    try {
+      // Kiểm tra xem lịch khám có tồn tại không
+      const exam = await healthInsuranceExamRepository.findById(id);
+      if (!exam) {
+        throw new Error('Không tìm thấy lịch khám');
+      }
+      
+      // Xóa lịch khám (soft delete)
+      await healthInsuranceExamRepository.remove(id);
+      
+      console.log('✅ [EXAM_SERVICE] Xóa lịch khám thành công:', id);
+      return { success: true, message: 'Xóa lịch khám thành công' };
+    } catch (error) {
+      console.error('❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám:', error.message);
+      throw new Error(`Không thể xóa lịch khám: ${error.message}`);
     }
   }
 }

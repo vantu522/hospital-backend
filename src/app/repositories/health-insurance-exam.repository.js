@@ -56,10 +56,62 @@ const updateOrderNumber = async (id, orderNumber, status = 'accept') => {
   return HealthInsuranceExam.findByIdAndUpdate(id, updateData, { new: true });
 };
 
+// Phương thức lấy tất cả lịch khám với phân trang
+const findAll = async (options = {}) => {
+  const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = -1, filters = {} } = options;
+  
+  // Query cơ bản
+  const query = { is_deleted: { $ne: true } };
+  
+  // Thêm các điều kiện lọc từ filter
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      query[key] = value;
+    }
+  });
+  
+  // Sort options - luôn sắp xếp từ mới đến cũ (-1)
+  const sort = {};
+  sort[sortBy] = -1; // Luôn sắp xếp giảm dần (mới nhất trước)
+  
+  // Tính toán skip và tổng số trang
+  const skip = (page - 1) * limit;
+  const total = await HealthInsuranceExam.countDocuments(query);
+  const totalPages = Math.ceil(total / limit);
+  
+  // Lấy dữ liệu theo trang - luôn phân trang với mặc định page=1, limit=10
+  const data = await HealthInsuranceExam.find(query)
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
+    .lean();
+  
+  return {
+    data,
+    total,
+    page: parseInt(page),
+    totalPages,
+    limit: parseInt(limit)
+  };
+};
+
+// Cập nhật thông tin lịch khám
+const update = async (id, data) => {
+  return HealthInsuranceExam.findByIdAndUpdate(id, data, { new: true });
+};
+
+// Xóa lịch khám (soft delete)
+const remove = async (id) => {
+  return HealthInsuranceExam.findByIdAndUpdate(id, { is_deleted: true }, { new: true });
+};
+
 export default {
   create,
   findById,
   findMaxOrderNumber,
   findByDateRange,
-  updateOrderNumber
+  updateOrderNumber,
+  findAll,
+  update,
+  remove
 };

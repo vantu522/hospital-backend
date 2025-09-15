@@ -10,10 +10,12 @@ class CongKhamService {
     }
   }
 
-  // Lấy cổng khám đang hoạt động
+  // Lấy tất cả cổng khám đang hoạt động (không cần tham số)
   async getActive() {
     try {
-      return await congKhamRepository.getActive();
+      // Gọi repository không truyền tham số, lấy tất cả cổng khám đang hoạt động
+      const activeGateways = await congKhamRepository.getActive();
+      return activeGateways;
     } catch (error) {
       throw new Error(`Lỗi khi lấy danh sách cổng khám hoạt động: ${error.message}`);
     }

@@ -426,9 +426,292 @@ const checkExamByEncodedId = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/health-insurance-exams/all:
+ *   get:
+ *     summary: Lấy danh sách tất cả lịch khám bảo hiểm y tế (có phân trang)
+ *     tags:
+ *       - HealthInsuranceExam
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Số trang (mặc định lấy tất cả nếu không có)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Số bản ghi mỗi trang (mặc định 10)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: Trường để sắp xếp (mặc định createdAt, luôn sắp xếp từ mới đến cũ)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, accept, reject]
+ *         description: Lọc theo trạng thái
+ *       - in: query
+ *         name: exam_type
+ *         schema:
+ *           type: string
+ *           enum: [BHYT, DV]
+ *         description: Lọc theo loại khám
+ *       - in: query
+ *         name: exam_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Lọc theo ngày khám (yyyy-MM-dd)
+ *       - in: query
+ *         name: IdPhongKham
+ *         schema:
+ *           type: string
+ *         description: Lọc theo ID phòng khám
+ *     responses:
+ *       200:
+ *         description: Danh sách lịch khám
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/HealthInsuranceExam'
+ *                 total:
+ *                   type: integer
+ *                   description: Tổng số bản ghi
+ *                 page:
+ *                   type: integer
+ *                   description: Trang hiện tại
+ *                 totalPages:
+ *                   type: integer
+ *                   description: Tổng số trang
+ *                 limit:
+ *                   type: integer
+ *                   description: Số bản ghi mỗi trang
+ *       400:
+ *         description: Lỗi truy vấn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+const getAllExams = async (req, res) => {
+  try {
+    // Lấy các tham số từ query
+    const options = {
+      page: req.query.page,
+      limit: req.query.limit || 10,
+      sortBy: req.query.sortBy,
+      status: req.query.status,
+      exam_type: req.query.exam_type,
+      exam_date: req.query.exam_date,
+      IdPhongKham: req.query.IdPhongKham
+    };
+    
+    // Gọi service để lấy dữ liệu
+    const result = await healthInsuranceExamService.getAllExams(options);
+    
+    // Trả về kết quả
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách lịch khám thành công',
+      ...result
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Có lỗi xảy ra khi lấy danh sách lịch khám'
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/{id}:
+ *   put:
+ *     summary: Cập nhật thông tin lịch khám
+ *     tags:
+ *       - HealthInsuranceExam
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của lịch khám cần cập nhật
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               HoTen:
+ *                 type: string
+ *                 description: Họ tên bệnh nhân
+ *               DienThoai:
+ *                 type: string
+ *                 description: Số điện thoại
+ *               email:
+ *                 type: string
+ *                 description: Email
+ *               CCCD:
+ *                 type: string
+ *                 description: Số CCCD
+ *               NgaySinh:
+ *                 type: string
+ *                 format: date
+ *                 description: Ngày sinh
+ *               GioiTinh:
+ *                 type: string
+ *                 enum: [Nam, Nữ, Khác]
+ *                 description: Giới tính
+ *               DiaChi:
+ *                 type: string
+ *                 description: Địa chỉ
+ *               status:
+ *                 type: string
+ *                 enum: [pending, accept, reject]
+ *                 description: Trạng thái lịch khám
+ *               symptoms:
+ *                 type: string
+ *                 description: Triệu chứng
+ *               exam_date:
+ *                 type: string
+ *                 format: date
+ *                 description: Ngày khám
+ *               exam_time:
+ *                 type: string
+ *                 description: Giờ khám
+ *     responses:
+ *       200:
+ *         description: Cập nhật lịch khám thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Cập nhật lịch khám thành công
+ *                 data:
+ *                   $ref: '#/components/schemas/HealthInsuranceExam'
+ *       400:
+ *         description: Lỗi cập nhật
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Không tìm thấy lịch khám
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+const updateExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    
+    // Gọi service để cập nhật lịch khám
+    const updatedExam = await healthInsuranceExamService.updateExam(id, data);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật lịch khám thành công',
+      ...updateExam
+    });
+  } catch (error) {
+    
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/{id}:
+ *   delete:
+ *     summary: Xóa lịch khám
+ *     tags:
+ *       - HealthInsuranceExam
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của lịch khám cần xóa
+ *     responses:
+ *       200:
+ *         description: Xóa lịch khám thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Xóa lịch khám thành công
+ *       400:
+ *         description: Lỗi xóa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Không tìm thấy lịch khám
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+const deleteExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Gọi service để xóa lịch khám
+    await healthInsuranceExamService.deleteExam(id);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Xóa lịch khám thành công'
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
   createExam,
   getExamById,
   checkExamByEncodedId,
-  checkBHYTCard
+  checkBHYTCard,
+  getAllExams,
+  updateExam,
+  deleteExam
 };
