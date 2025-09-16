@@ -6,25 +6,38 @@ import https from 'https';
 class HealthInsuranceExamService {
   
   formatDisplayDateTime(date, showTimeComponent = true) {
-    if (!date) return '';
-    try {
-      const d = date instanceof Date ? date : new Date(date);
-      if (isNaN(d.getTime())) return '';
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const year = d.getFullYear();
+  if (!date) return '';
+  try {
+    let d;
 
-      if (!showTimeComponent) {
-        return `${month}/${day}/${year}`;
-      }
-
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes} ${month}/${day}/${year}`;
-    } catch {
-      return '';
+    if (date instanceof Date) {
+      d = date;
+    } else if (typeof date === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+      // Trường hợp dd/MM/yyyy
+      const [day, month, year] = date.split('/');
+      d = new Date(`${year}-${month}-${day}T00:00:00`);
+    } else {
+      d = new Date(date); // ISO hay timestamp
     }
+
+    if (isNaN(d.getTime())) return '';
+
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const year = d.getFullYear();
+
+    if (!showTimeComponent) {
+      return `${month}/${day}/${year}`;
+    }
+
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes} ${month}/${day}/${year}`;
+  } catch {
+    return '';
   }
+}
+
   //Khai báo agent 
   agent = new https.Agent({
     cert: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
