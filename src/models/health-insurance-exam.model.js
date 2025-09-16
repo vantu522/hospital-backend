@@ -48,6 +48,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
       required: true,
   },
   IsDonTiepCCCD: { type: Boolean, required: true },
+  CMNDNgayCap: { type: String, trim: true },
   SoNha: { type: String, trim: true, required: true },
   exam_date: { type: Date, required: true },
   exam_time: { type: String, required: true },
