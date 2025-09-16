@@ -751,7 +751,7 @@ class HealthInsuranceExamService {
         IdKhoaKham: exam.IdKhoaKham,
         IsDonTiepCCCD: !!exam.CCCD,
         CMNDNoiCap: process.env.NOI_CAP_CCCD_HIS,
-        CMNDNgayCap: this.formatDisplayDateTime(exam.NgayCapCCCD, false),
+        CMNDNgayCap: this.formatDisplayDateTime(exam.CMNDNgayCap, false),
         IsMSTCaNhan: true,
         MaXa: exam.MaXa,
         TenXa: exam.TenXa,
