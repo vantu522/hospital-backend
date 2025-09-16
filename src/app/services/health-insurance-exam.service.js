@@ -767,7 +767,6 @@ class HealthInsuranceExamService {
         IdCongKhamBanDau: exam.IdCongKhamBanDau,
         NgayKham: this.formatDisplayDateTime(new Date()),
         NgayDonTiep: this.formatDisplayDateTime(new Date()),
-        IsDatKhamTuXa: false,
         Status: 0
       };
       
