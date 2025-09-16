@@ -15,24 +15,23 @@ class HealthInsuranceExamService {
   
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
   convertBHYTToThirdParty(bhytData) {
-    const isMoi = !!bhytData.maTheMoi;
     return {
       "Domain": process.env.DOMAIN,
-      SoBHYT: isMoi ? bhytData.maTheMoi : bhytData.maThe,
+      SoBHYT: bhytData.maThe,
       HoVaTen: bhytData.hoTen,
       NgaySinh: bhytData.ngaySinh,
       GioiTinh: bhytData.gioiTinh === 'Nam',
       DiaChi: bhytData.diaChi,
       NoiDKBD: bhytData.maDKBD,
-      TenBenhVienDKBD: isMoi ? (bhytData.tenDKBDMoi ) : (bhytData.tenDKBD ),
-      NgayDangKy: isMoi ? bhytData.gtTheTuMoi : bhytData.gtTheTu,
-      NgayHieuLuc: isMoi ? bhytData.gtTheTuMoi : bhytData.gtTheTu,
-      NgayHetHan: isMoi ? bhytData.gtTheDenMoi : bhytData.gtTheDen,
-
+      TenBenhVienDKBD: bhytData.tenDKBDMoi || '',
+      NgayDangKy: bhytData.gtTheTu,
+      NgayHieuLuc: bhytData.gtTheTu,
+      NgayHetHan: formatDisplayDateTime(bhytData.gtTheDen),
+      Active: true,
       IsBHYT5Nam: !!bhytData.ngayDu5Nam,
       NgayDu5Nam: bhytData.ngayDu5Nam,
       MaSoBHXH: bhytData.maSoBHXH,
-      IsMaTheMoi: isMoi,
+      IsMaTheMoi: !!bhytData.maTheMoi,
     };
   }
   // Lock để đồng bộ lấy token mới khi gặp lỗi 401
@@ -770,7 +769,7 @@ class HealthInsuranceExamService {
             IsDungTuyen: !!dmBHYT,
             SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
             CMND: exam.CCCD,
-            IsDatKhamTuXa: true,
+            IsDatKhamTuXa: false,
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
