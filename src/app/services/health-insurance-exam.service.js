@@ -4,6 +4,27 @@ import QRCode from 'qrcode';
 import https from 'https';
 
 class HealthInsuranceExamService {
+  
+  formatDisplayDateTime(date, showTimeComponent = true) {
+    if (!date) return '';
+    try {
+      const d = date instanceof Date ? date : new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const year = d.getFullYear();
+
+      if (!showTimeComponent) {
+        return `${month}/${day}/${year}`;
+      }
+
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes} ${month}/${day}/${year}`;
+    } catch {
+      return '';
+    }
+  }
   //Khai báo agent 
   agent = new https.Agent({
     cert: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
@@ -24,9 +45,9 @@ class HealthInsuranceExamService {
       DiaChi: bhytData.diaChi,
       NoiDKBD: bhytData.maDKBD,
       TenBenhVienDKBD: bhytData.tenDKBDMoi || '',
-      NgayDangKy: formatDisplayDateTime(bhytData.gtTheTu),
-      NgayHieuLuc: formatDisplayDateTime(bhytData.gtTheTu),
-      NgayHetHan: formatDisplayDateTime(bhytData.gtTheDen),
+      NgayDangKy: this.formatDisplayDateTime(bhytData.gtTheTu),
+      NgayHieuLuc: this.formatDisplayDateTime(bhytData.gtTheTu),
+      NgayHetHan: this.formatDisplayDateTime(bhytData.gtTheDen),
       Active: true,
       IsBHYT5Nam: !!bhytData.ngayDu5Nam,
       NgayDu5Nam: bhytData.ngayDu5Nam,
@@ -627,28 +648,6 @@ class HealthInsuranceExamService {
       // Định dạng ngày giờ cho tất cả các trường ngày tháng
       // FORMAT: HH:MM mm/dd/yyyy (giờ:phút tháng/ngày/năm) theo yêu cầu API HIS
       // Ngày sinh chỉ cần dạng mm/dd/yyyy (không cần giờ)
-      const formatDisplayDateTime = (date, showTimeComponent = true) => {
-        if (!date) return '';
-        try {
-          const d = date instanceof Date ? date : new Date(date);
-          if (isNaN(d.getTime())) return '';
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          const year = d.getFullYear();
-          
-          // Nếu không cần hiển thị giờ (chỉ ngày), trả về định dạng MM/DD/YYYY
-          if (!showTimeComponent) {
-            return `${month}/${day}/${year}`;
-          }
-          
-          // Nếu cần hiển thị cả giờ, trả về định dạng HH:MM MM/DD/YYYY
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          return `${hours}:${minutes} ${month}/${day}/${year}`;
-        } catch {
-          return '';
-        }
-      };
       
       // Lấy phòng khám
       const PhongKham = (await import('../../models/phong-kham.model.js')).default;
@@ -749,12 +748,13 @@ class HealthInsuranceExamService {
         SoNha: exam.SoNha,
         IdNgheNghiep: exam.IdNgheNghiep,
         TenNgheNghiep: exam.TenNgheNghiep || "Khác",
-        NgaySinh: formatDisplayDateTime(exam.NgaySinh, false),
+        NgaySinh: this.formatDisplayDateTime(exam.NgaySinh, false),
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: process.env.ID_CANBO_HIS||"3923362b-5ec4-4d11-ae0f-684001f67748",
         IdCongKhamBanDau: exam.IdCongKhamBanDau,
-        NgayKham: formatDisplayDateTime(new Date()),
-        NgayDonTiep: formatDisplayDateTime(new Date()),
+        NgayKham: this.formatDisplayDateTime(new Date()),
+        NgayDonTiep: this.formatDisplayDateTime(new Date()),
+        IsDatKhamTuXa: true,
         Status: 0
       };
       
@@ -769,7 +769,7 @@ class HealthInsuranceExamService {
             IsDungTuyen: !!dmBHYT,
             SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
             CMND: exam.CCCD,
-            IsDatKhamTuXa: false,
+            
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
