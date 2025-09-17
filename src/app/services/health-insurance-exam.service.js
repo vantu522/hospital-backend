@@ -468,7 +468,6 @@ class HealthInsuranceExamService {
     data.slotId = slot._id;
     data.IdPhongKham = slot.IdPhongKham;
 
-    // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
       // Format ngày đúng
       const examDate = new Date(data.exam_date);
@@ -479,8 +478,8 @@ class HealthInsuranceExamService {
       console.log(`🔢 [CREATE_EXAM] Gán số thứ tự: ${data.order_number} cho lịch khám mới`);
     }
 
-    if (data.exam_type === 'BHYT' && dmBHYT) {
-    data.dmBHYT = dmBHYT;
+    if (data.exam_type === 'BHYT' && data.dmBHYT) {
+            data.dmBHYT = dmBHYT;
     }
 
 
