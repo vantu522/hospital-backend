@@ -898,8 +898,9 @@ class HealthInsuranceExamService {
       // Xóa cache BHYT sau khi đẩy lên HIS (thành công hoặc thất bại)
       const bhytKey = exam.BHYT;
       const cccdKey = exam.CCCD;
-      // Lưu dmBHYT vào biến tạm trước khi xóa cache
-      const dmBHYTTemp = typeof dmBHYT !== 'undefined' ? dmBHYT : null;
+  // Lưu dmBHYT vào biến tạm trước khi xóa cache
+  console.log(`[DEBUG] dmBHYT trước khi lưu vào dmBHYTTemp cho exam ${exam._id}:`, JSON.stringify(dmBHYT, null, 2));
+  const dmBHYTTemp = typeof dmBHYT !== 'undefined' ? dmBHYT : null;
       if (bhytKey || cccdKey) {
         if (bhytKey && this.bhytResultCache[bhytKey]) {
           delete this.bhytResultCache[bhytKey];
@@ -914,6 +915,7 @@ class HealthInsuranceExamService {
       // Chạy nền cập nhật 4 field vào DB sau khi push lên HIS
       setImmediate(async () => {
         try {
+          console.log(`[DEBUG] dmBHYTTemp trước khi update exam ${exam._id}:`, JSON.stringify(dmBHYTTemp, null, 2));
           await healthInsuranceExamRepository.update(exam._id, {
             dmBHYT: dmBHYTTemp,
             IsBHYT: !!dmBHYTTemp,
