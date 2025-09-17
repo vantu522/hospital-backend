@@ -928,6 +928,7 @@ class HealthInsuranceExamService {
         setImmediate(async () => {
           try {
             await healthInsuranceExamRepository.update(exam._id, {
+              dmBHYT: dmBHYT,
               IsBHYT: !!exam.dmBHYT,
               IsDungTuyen: !!exam.dmBHYT,
               SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
