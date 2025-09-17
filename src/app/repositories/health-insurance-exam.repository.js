@@ -112,6 +112,11 @@ const remove = async (id) => {
   return HealthInsuranceExam.findByIdAndUpdate(id, { is_deleted: true }, { new: true });
 };
 
+
+// Tìm một bản ghi theo điều kiện
+const findOne = async (filter) => {
+  return HealthInsuranceExam.findOne(filter).lean();
+};
 export default {
   create,
   findById,
@@ -120,5 +125,6 @@ export default {
   updateOrderNumber,
   findAll,
   update,
-  remove
+  remove,
+  findOne
 };

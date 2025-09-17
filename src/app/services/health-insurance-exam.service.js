@@ -199,7 +199,13 @@ class HealthInsuranceExamService {
         console.log('✅ [BHYT_CACHE] Danh sách cache hiện tại:', 
           Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })));
         
-        return { success: true, data: response.data, converted };
+        let exam = null;
+        try {
+          exam = await healthInsuranceExamRepository.findOne({ SoBHYT: converted.SoBHYT });
+        } catch (err) {
+        console.error('[BHYT] Lỗi khi tìm exam theo SoBHYT:', err.message);
+        }
+        return { success: true, data: response.data, converted, exam };
       } else {
         return { 
           success: false, 
@@ -472,6 +478,11 @@ class HealthInsuranceExamService {
       data.order_number = maxOrder + 1;
       console.log(`🔢 [CREATE_EXAM] Gán số thứ tự: ${data.order_number} cho lịch khám mới`);
     }
+
+    if (data.exam_type === 'BHYT' && dmBHYT) {
+    data.dmBHYT = dmBHYT;
+    }
+
 
     // Parallel operations sau khi đã có order_number
     const [exam, phongKhamObj] = await Promise.all([
@@ -783,8 +794,7 @@ class HealthInsuranceExamService {
             IsBHYT: !!dmBHYT,
             IsDungTuyen: !!dmBHYT,
             SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
-            CMND: exam.CCCD,
-            
+            CMND: exam.CCCD,  
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
@@ -915,6 +925,20 @@ class HealthInsuranceExamService {
         
         console.log('🧹 [BHYT_CACHE] Số lượng mã thẻ còn lại trong cache:', Object.keys(this.bhytResultCache).length);
       }
+        // Chạy nền cập nhật 4 field vào DB sau khi push lên HIS
+        setImmediate(async () => {
+          try {
+            await healthInsuranceExamRepository.update(exam._id, {
+              IsBHYT: !!exam.dmBHYT,
+              IsDungTuyen: !!exam.dmBHYT,
+              SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
+              CMND: exam.CCCD
+            });
+            console.log(`[EXAM] Đã cập nhật 4 field HIS cho exam ${exam._id}`);
+          } catch (err) {
+            console.error(`[EXAM] Lỗi khi cập nhật 4 field HIS cho exam ${exam._id}:`, err.message);
+          }
+        });
     }
   }
 

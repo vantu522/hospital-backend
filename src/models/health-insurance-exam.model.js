@@ -47,6 +47,15 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
       ref: 'ScheduleSlot',
       required: true,
   },
+  dmBHYT: {
+    type: Object,
+    default: null
+  },
+  IsBHYT: { type: Boolean },
+  IsDungTuyen: { type: Boolean},
+  SoBHYT: { type: String, trim: true },
+  CMND: { type: String, trim: true },
+  
   IsDonTiepCCCD: { type: Boolean, required: true },
   CMNDNgayCap: { type: String, trim: true },
   SoNha: { type: String, trim: true, required: true },
