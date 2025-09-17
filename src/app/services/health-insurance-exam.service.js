@@ -825,19 +825,7 @@ class HealthInsuranceExamService {
           details: response.data
         };
       }
-      
-      // Kiểm tra các trường bắt buộc trong response
-      if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
-        console.error('❌ [HIS] API trả về dữ liệu rỗng');
-        return {
-          success: false,
-          error: 'API HIS trả về dữ liệu rỗng',
-          details: response.data
-        };
-      }
-      
       console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
-      
       // 6. Trả về kết quả
       return {
         success: true,
@@ -910,35 +898,34 @@ class HealthInsuranceExamService {
       // Xóa cache BHYT sau khi đẩy lên HIS (thành công hoặc thất bại)
       const bhytKey = exam.BHYT;
       const cccdKey = exam.CCCD;
-      
+      // Lưu dmBHYT vào biến tạm trước khi xóa cache
+      const dmBHYTTemp = typeof dmBHYT !== 'undefined' ? dmBHYT : null;
       if (bhytKey || cccdKey) {
         if (bhytKey && this.bhytResultCache[bhytKey]) {
           delete this.bhytResultCache[bhytKey];
           console.log('🧹 [BHYT_CACHE] Đã xóa cache BHYT sau khi push lên HIS:', bhytKey);
         }
-        
         if (cccdKey && this.bhytResultCache[cccdKey]) {
           delete this.bhytResultCache[cccdKey];
           console.log('🧹 [BHYT_CACHE] Đã xóa cache CCCD sau khi push lên HIS:', cccdKey);
         }
-        
         console.log('🧹 [BHYT_CACHE] Số lượng mã thẻ còn lại trong cache:', Object.keys(this.bhytResultCache).length);
       }
-        // Chạy nền cập nhật 4 field vào DB sau khi push lên HIS
-        setImmediate(async () => {
-          try {
-            await healthInsuranceExamRepository.update(exam._id, {
-              dmBHYT: dmBHYT,
-              IsBHYT: !!dmBHYT,
-              IsDungTuyen: !!dmBHYT,
-              SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
-              CMND: exam.CCCD
-            });
-            console.log(`[EXAM] Đã cập nhật 4 field HIS cho exam ${exam._id}`);
-          } catch (err) {
-            console.error(`[EXAM] Lỗi khi cập nhật 4 field HIS cho exam ${exam._id}:`, err.message);
-          }
-        });
+      // Chạy nền cập nhật 4 field vào DB sau khi push lên HIS
+      setImmediate(async () => {
+        try {
+          await healthInsuranceExamRepository.update(exam._id, {
+            dmBHYT: dmBHYTTemp,
+            IsBHYT: !!dmBHYTTemp,
+            IsDungTuyen: !!dmBHYTTemp,
+            SoBHYT: dmBHYTTemp ? dmBHYTTemp.SoBHYT : exam.SoBHYT,
+            CMND: exam.CCCD
+          });
+          console.log(`[EXAM] Đã cập nhật 4 field HIS cho exam ${exam._id}`);
+        } catch (err) {
+          console.error(`[EXAM] Lỗi khi cập nhật 4 field HIS cho exam ${exam._id}:`, err.message);
+        }
+      });
     }
   }
 
