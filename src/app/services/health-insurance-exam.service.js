@@ -929,9 +929,9 @@ class HealthInsuranceExamService {
           try {
             await healthInsuranceExamRepository.update(exam._id, {
               dmBHYT: dmBHYT,
-              IsBHYT: !!exam.dmBHYT,
-              IsDungTuyen: !!exam.dmBHYT,
-              SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
+              IsBHYT: !!dmBHYT,
+              IsDungTuyen: !!dmBHYT,
+              SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
               CMND: exam.CCCD
             });
             console.log(`[EXAM] Đã cập nhật 4 field HIS cho exam ${exam._id}`);
