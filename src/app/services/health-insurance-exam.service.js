@@ -1019,6 +1019,18 @@ class HealthInsuranceExamService {
       throw new Error(`Không thể xóa lịch khám: ${error.message}`);
     }
   }
+    // === Lấy thông tin lịch khám theo ID ===
+  async getExamById(id) {
+    try {
+      const exam = await healthInsuranceExamRepository.findById(id);
+      if (!exam) {
+        throw new Error('Không tìm thấy lịch khám');
+      }
+      return exam;
+    } catch (error) {
+      throw new Error(`Không thể lấy lịch khám: ${error.message}`);
+    }
+  }
 }
 
 export default new HealthInsuranceExamService();
