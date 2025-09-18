@@ -94,10 +94,10 @@ class HealthInsuranceExamService {
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
-        throw err;
+        throw new Error("Cổng BHYT phản hồi lâu, vui lòng quét lại");
       }
     }
-    throw lastError;
+    throw new Error("Cổng BHYT phản hồi lâu, vui lòng quét lại");
   }
 
   // === Lấy token BHYT với TTL từ server response ===
@@ -183,29 +183,23 @@ class HealthInsuranceExamService {
         }
       }
 
-      // Chỉ có maKetQua = "000" là thành công, tất cả các mã khác đều là lỗi
-      if (response.data?.maKetQua === "000") {
-        // Cache kết quả convert cho maThe
+      // Chỉ lưu cache khi maKetQua === '000' (thành công)
+      if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
         const converted = this.convertBHYTToThirdParty(response.data);
-        
-        // Log dữ liệu converted để debug
         console.log('✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ:', maThe);
         console.log('✅ [BHYT_CACHE] Dữ liệu converted:', JSON.stringify(converted, null, 2));
-        
-        // Lưu vào cache
         this.bhytResultCache[maThe] = converted;
-        
-        // Log danh sách cache hiện tại
         console.log('✅ [BHYT_CACHE] Danh sách cache hiện tại:', 
           Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })));
-        
         return { success: true, data: response.data, converted };
       } else {
+        // KHÔNG lưu vào cache nếu không thành công
+        console.log('❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua:', response.data?.maKetQua);
         return { 
           success: false, 
-          message: response.data?.ghiChu || `Thẻ BHYT không hợp lệ (mã lỗi: ${response.data?.maKetQua})`, 
+          message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`, 
           code: response.data?.maKetQua,
-          data: response.data 
+          data: response.data
         };
       }
     } catch (err) {
