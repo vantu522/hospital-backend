@@ -833,6 +833,21 @@ class HealthInsuranceExamService {
       console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
       
       // 6. Trả về kết quả
+        setImmediate(() => {
+          const updateData = {
+            NgayKham: this.formatDisplayDateTime(new Date()),
+            NgayDonTiep: this.formatDisplayDateTime(new Date())
+          };
+          // Nếu có dmBHYT thì lưu luôn vào exam
+          if (dmBHYT) {
+            updateData.dmBHYT = dmBHYT;
+          }
+          healthInsuranceExamRepository.update(exam._id, updateData);
+        });
+        exam._id, {
+          NgayKham: this.formatDisplayDateTime(new Date()),
+          NgayDonTiep: this.formatDisplayDateTime(new Date())
+        }
       return {
         success: true,
         data: response.data
