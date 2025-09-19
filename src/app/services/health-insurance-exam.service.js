@@ -94,10 +94,10 @@ class HealthInsuranceExamService {
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
-        throw err;
+        throw new Error("Cổng BHYT phản hồi lâu, vui lòng quét lại");
       }
     }
-    throw lastError;
+    throw new Error("Cổng BHYT phản hồi lâu, vui lòng quét lại");
   }
 
   // === Lấy token BHYT với TTL từ server response ===
@@ -183,35 +183,23 @@ class HealthInsuranceExamService {
         }
       }
 
-      // Chỉ có maKetQua = "000" là thành công, tất cả các mã khác đều là lỗi
-      if (response.data?.maKetQua === "000") {
-        // Cache kết quả convert cho maThe
+      // Chỉ lưu cache khi maKetQua === '000' (thành công)
+      if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
         const converted = this.convertBHYTToThirdParty(response.data);
-        
-        // Log dữ liệu converted để debug
         console.log('✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ:', maThe);
         console.log('✅ [BHYT_CACHE] Dữ liệu converted:', JSON.stringify(converted, null, 2));
-        
-        // Lưu vào cache
         this.bhytResultCache[maThe] = converted;
-        
-        // Log danh sách cache hiện tại
         console.log('✅ [BHYT_CACHE] Danh sách cache hiện tại:', 
           Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })));
-        
-        let exam = null;
-        try {
-          exam = await healthInsuranceExamRepository.findOne({ SoBHYT: converted.SoBHYT });
-        } catch (err) {
-        console.error('[BHYT] Lỗi khi tìm exam theo SoBHYT:', err.message);
-        }
-        return { success: true, data: response.data, converted, exam };
+        return { success: true, data: response.data, converted };
       } else {
+        // KHÔNG lưu vào cache nếu không thành công
+        console.log('❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua:', response.data?.maKetQua);
         return { 
           success: false, 
-          message: response.data?.ghiChu || `Thẻ BHYT không hợp lệ (mã lỗi: ${response.data?.maKetQua})`, 
+          message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`, 
           code: response.data?.maKetQua,
-          data: response.data 
+          data: response.data
         };
       }
     } catch (err) {
@@ -468,6 +456,7 @@ class HealthInsuranceExamService {
     data.slotId = slot._id;
     data.IdPhongKham = slot.IdPhongKham;
 
+    // Lấy order number TRƯỚC khi tạo exam nếu status là accept
     if (data.status === 'accept') {
       // Format ngày đúng
       const examDate = new Date(data.exam_date);
@@ -477,11 +466,6 @@ class HealthInsuranceExamService {
       data.order_number = maxOrder + 1;
       console.log(`🔢 [CREATE_EXAM] Gán số thứ tự: ${data.order_number} cho lịch khám mới`);
     }
-
-    if (data.exam_type === 'BHYT' && data.dmBHYT) {
-            data.dmBHYT = dmBHYT;
-    }
-
 
     // Parallel operations sau khi đã có order_number
     const [exam, phongKhamObj] = await Promise.all([
@@ -793,7 +777,8 @@ class HealthInsuranceExamService {
             IsBHYT: !!dmBHYT,
             IsDungTuyen: !!dmBHYT,
             SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
-            CMND: exam.CCCD,  
+            CMND: exam.CCCD,
+            
           }
         : basePayload; // Nếu là DV, chỉ dùng các trường cơ bản
       
@@ -825,7 +810,19 @@ class HealthInsuranceExamService {
           details: response.data
         };
       }
+      
+      // Kiểm tra các trường bắt buộc trong response
+      if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
+        console.error('❌ [HIS] API trả về dữ liệu rỗng');
+        return {
+          success: false,
+          error: 'API HIS trả về dữ liệu rỗng',
+          details: response.data
+        };
+      }
+      
       console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
+      
       // 6. Trả về kết quả
       return {
         success: true,
@@ -898,36 +895,20 @@ class HealthInsuranceExamService {
       // Xóa cache BHYT sau khi đẩy lên HIS (thành công hoặc thất bại)
       const bhytKey = exam.BHYT;
       const cccdKey = exam.CCCD;
-  // Lưu dmBHYT vào biến tạm trước khi xóa cache
-  console.log(`[DEBUG] dmBHYT trước khi lưu vào dmBHYTTemp cho exam ${exam._id}:`, JSON.stringify(dmBHYT, null, 2));
-  const dmBHYTTemp = typeof dmBHYT !== 'undefined' ? dmBHYT : null;
+      
       if (bhytKey || cccdKey) {
         if (bhytKey && this.bhytResultCache[bhytKey]) {
           delete this.bhytResultCache[bhytKey];
           console.log('🧹 [BHYT_CACHE] Đã xóa cache BHYT sau khi push lên HIS:', bhytKey);
         }
+        
         if (cccdKey && this.bhytResultCache[cccdKey]) {
           delete this.bhytResultCache[cccdKey];
           console.log('🧹 [BHYT_CACHE] Đã xóa cache CCCD sau khi push lên HIS:', cccdKey);
         }
+        
         console.log('🧹 [BHYT_CACHE] Số lượng mã thẻ còn lại trong cache:', Object.keys(this.bhytResultCache).length);
       }
-      // Chạy nền cập nhật 4 field vào DB sau khi push lên HIS
-      setImmediate(async () => {
-        try {
-          console.log(`[DEBUG] dmBHYTTemp trước khi update exam ${exam._id}:`, JSON.stringify(dmBHYTTemp, null, 2));
-          await healthInsuranceExamRepository.update(exam._id, {
-            dmBHYT: dmBHYTTemp,
-            IsBHYT: !!dmBHYTTemp,
-            IsDungTuyen: !!dmBHYTTemp,
-            SoBHYT: dmBHYTTemp ? dmBHYTTemp.SoBHYT : exam.SoBHYT,
-            CMND: exam.CCCD
-          });
-          console.log(`[EXAM] Đã cập nhật 4 field HIS cho exam ${exam._id}`);
-        } catch (err) {
-          console.error(`[EXAM] Lỗi khi cập nhật 4 field HIS cho exam ${exam._id}:`, err.message);
-        }
-      });
     }
   }
 

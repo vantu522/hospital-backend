@@ -19,7 +19,7 @@ router.get('/:id', validateIdParam, phongKhamController.getById);
 // Admin/SuperAdmin routes (thao tác dữ liệu)
 router.post('/', requireAdminOrSuperadmin, validateCreatePhongKham, phongKhamController.create);
 router.put('/:id', requireAdminOrSuperadmin, validateUpdatePhongKham, phongKhamController.update);
-router.delete('/:id', requireAdminOrSuperadmin, validateIdParam, phongKhamController.delete);
+router.delete('/:id', validateIdParam, phongKhamController.delete);
 router.patch('/:id/restore', requireAdminOrSuperadmin, validateIdParam, phongKhamController.restore);
 
 export default router;
