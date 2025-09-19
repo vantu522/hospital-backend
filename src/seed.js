@@ -101,19 +101,19 @@ async function seed() {
       name: 'Admin Hospital',
       email: 'admin@hospital.com',
       password: '123456',
-      role: 'admin'
+      role: 'superadmin'
     },
     {
       name: 'Bác sĩ Nguyễn Văn Nam',
       email: 'doctor@hospital.com',
       password: '123456',
-      role: 'doctor'
+      role: 'admin'
     },
     {
       name: 'Nguyễn Thị Hoa',
       email: 'user@hospital.com',
       password: '123456',
-      role: 'user'
+      role: 'admin'
     },
     ...Array.from({ length: 7 }).map((_, index) => ({
       name: faker.helpers.arrayElement([
@@ -124,7 +124,7 @@ async function seed() {
       ]) + ` ${index + 4}`,
       email: faker.internet.email(),
       password: '123456',
-      role: faker.helpers.arrayElement(['admin', 'doctor', 'user'])
+      role: faker.helpers.arrayElement(['admin', 'superadmin'])
     }))
   ]);
 
