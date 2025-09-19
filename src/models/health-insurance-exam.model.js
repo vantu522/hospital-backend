@@ -36,7 +36,7 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   IdCanBoDonTiep: { type: String,  trim: true },
   IdBenhVien: { type: String,  trim: true },
   IdCongKhamBanDau: { type: String, required: true, trim: true },
-  
+  SoXepHang: { type: Number, trim: true, default: null },
   exam_type: {
     type: String,
     enum: ['BHYT', 'DV'],
