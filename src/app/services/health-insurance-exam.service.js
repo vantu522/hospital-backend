@@ -22,30 +22,21 @@ class HealthInsuranceExamService {
 
     if (isNaN(d.getTime())) return '';
 
-    // --- Chỉnh sửa: dùng locale 'en-US' + timezone VN ---
-    const options = {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    };
-
-    const str = d.toLocaleString('en-US', options); // "09/19/2025, 13:30"
-    const [datePart, timePart] = str.split(', ');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const year = d.getFullYear();
 
     if (!showTimeComponent) {
-      return datePart; // "09/19/2025"
+      return `${month}/${day}/${year}`;
     }
 
-    return `${timePart} ${datePart}`; // "13:30 09/19/2025"
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes} ${month}/${day}/${year}`;
   } catch {
     return '';
   }
 }
-
 
   //Khai báo agent 
   agent = new https.Agent({
@@ -833,21 +824,6 @@ class HealthInsuranceExamService {
       console.log('✅ [HIS] Đẩy thông tin lên HIS thành công:', exam._id);
       
       // 6. Trả về kết quả
-        setImmediate(() => {
-          const updateData = {
-            NgayKham: this.formatDisplayDateTime(new Date()),
-            NgayDonTiep: this.formatDisplayDateTime(new Date())
-          };
-          // Nếu có dmBHYT thì lưu luôn vào exam
-          if (dmBHYT) {
-            updateData.dmBHYT = dmBHYT;
-          }
-          healthInsuranceExamRepository.update(exam._id, updateData);
-        });
-        exam._id, {
-          NgayKham: this.formatDisplayDateTime(new Date()),
-          NgayDonTiep: this.formatDisplayDateTime(new Date())
-        }
       return {
         success: true,
         data: response.data
