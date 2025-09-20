@@ -208,9 +208,9 @@ class ImportController {
           ten: ten.toString().trim(),
           dia_chi: diaChi ? diaChi.toString().trim() : '',
           cap_quan_li: capQuanLi ? capQuanLi.toString().trim() : 'Phòng',
-          IDKhoaKham: idKhoaKham.toString().trim(),
-          IDLoaiKham: idLoaiKham.toString().trim(),
-          IDCongKhamBanDau: idCongKhamBanDau ? idCongKhamBanDau.toString().trim() : null,
+          IdKhoaKham: idKhoaKham.toString().trim(),
+          IdLoaiKham: idLoaiKham.toString().trim(),
+          IdCongKhamBanDau: idCongKhamBanDau ? idCongKhamBanDau.toString().trim() : null,
           is_active: true
         };
       });
