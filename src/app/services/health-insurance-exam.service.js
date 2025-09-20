@@ -38,7 +38,7 @@ class HealthInsuranceExamService {
       return '';
     }
   }
-
+  
   //Khai báo agent 
   agent = new https.Agent({
     cert: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
@@ -659,7 +659,11 @@ class HealthInsuranceExamService {
       } else {
         logger.info('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: %s', exam.exam_type);
       }
-
+      function getNowVN() {
+      const nowUTC = new Date();
+      const offsetVN = 7 * 60; // phút
+      return new Date(nowUTC.getTime() + (offsetVN - nowUTC.getTimezoneOffset()) * 60000);
+      }
       // 4. Tạo payload
       const basePayload = {
         GioiTinh: exam.GioiTinh === 'Nam',
@@ -692,8 +696,8 @@ class HealthInsuranceExamService {
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: process.env.ID_CANBO_HIS || '3923362b-5ec4-4d11-ae0f-684001f67748',
         IdCongKhamBanDau: exam.IdCongKhamBanDau,
-        NgayKham: this.formatDisplayDateTime(new Date()),
-        NgayDonTiep: this.formatDisplayDateTime(new Date()),
+        NgayKham: this.formatDisplayDateTime(new Date(getNowVN())),
+        NgayDonTiep: this.formatDisplayDateTime(new Date(getNowVN())),
         Status: 0
       };
 
