@@ -706,8 +706,8 @@ class HealthInsuranceExamService {
         : basePayload;
 
   logger.info('🏥 [HIS] Payload gửi lên HIS: %o', payload);
-  logger.info(`[LOG] NgayKham: %s`, payload.NgayKham);
-  logger.info(`[LOG] NgayDonTiep: %s`, payload.NgayDonTiep);
+  logger.info(`[LOG] NgayKham:`, payload.NgayKham);
+  logger.info(`[LOG] NgayDonTiep:`, payload.NgayDonTiep);
 
       // 5. Gọi API
       const response = await axios.post(API_PUSH_TO_HIS_DUCTHO, payload, {
