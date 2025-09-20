@@ -313,7 +313,7 @@ class ImportController {
       }
 
       const docs = sheetData.map((row, index) => {
-        const id = row["Id"];
+        const id = row["ID"];
         const ma = row["Mã"];
         const ten = row["Tên"];
 
@@ -426,13 +426,13 @@ class ImportController {
       }
 
       const docs = sheetData.map((row, index) => {
-        // Chuẩn hóa key để tránh khoảng trắng
+        // Chuẩn hóa key để tránh khoảng trắng và đồng bộ "ID"
         const normalizedRow = {};
         Object.keys(row).forEach(key => {
-          normalizedRow[key.trim()] = row[key];
+          normalizedRow[key.trim() === 'Id' ? 'ID' : key.trim()] = row[key];
         });
 
-        const id = normalizedRow["Id"];
+        const id = normalizedRow["ID"];
         const ma_bv = normalizedRow["Mã BV"];
         const ma_bhyt = normalizedRow["Mã BHYT"];
         const ten_bv = normalizedRow["Tên BV"];
@@ -646,7 +646,7 @@ class ImportController {
     try {
       const templateData = [
         {
-          "Id": "CK001",
+          "ID": "CK001",
           "Mã BV": "C01",
           "Mã BHYT": "BH01", 
           "Tên BV": "Cổng khám số 1",
