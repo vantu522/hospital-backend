@@ -549,13 +549,13 @@ class HealthInsuranceExamService {
     }
 
     try {
-      const { API_LOGIN_HIS_333, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
+      const { API_LOGIN_HIS_DUCTHO, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
 
-      if (!API_LOGIN_HIS_333 || !HIS_ACCOUNT || !HIS_PASSWORD) {
+      if (!API_LOGIN_HIS_DUCTHO || !HIS_ACCOUNT || !HIS_PASSWORD) {
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
 
-      logger.info('🔑 [HIS] Đang lấy token mới từ: %s', API_LOGIN_HIS_333);
+      logger.info('🔑 [HIS] Đang lấy token mới từ: %s', API_LOGIN_HIS_DUCTHO);
 
       // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
@@ -570,7 +570,7 @@ class HealthInsuranceExamService {
       };
 
       // Gửi request với params và agent
-      const response = await axios.post(API_LOGIN_HIS_333, params, { headers, httpsAgent: this.agent });
+      const response = await axios.post(API_LOGIN_HIS_DUCTHO, params, { headers, httpsAgent: this.agent });
 
       logger.info('✅ [HIS] Nhận phản hồi từ server HIS: %s', response.status);
 
@@ -602,9 +602,9 @@ class HealthInsuranceExamService {
       const token = await this.getHISToken();
 
       // 2. Lấy API URL từ biến môi trường
-      const { API_PUSH_TO_HIS_333 } = process.env;
-      if (!API_PUSH_TO_HIS_333) {
-        throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_333');
+      const { API_PUSH_TO_HIS_DUCTHO } = process.env;
+      if (!API_PUSH_TO_HIS_DUCTHO) {
+        throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_DUCTHO');
       }
 
       logger.info('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
@@ -708,7 +708,7 @@ class HealthInsuranceExamService {
       logger.info('🏥 [HIS] Payload gửi lên HIS: %o', payload);
 
       // 5. Gọi API
-      const response = await axios.post(API_PUSH_TO_HIS_333, payload, {
+      const response = await axios.post(API_PUSH_TO_HIS_DUCTHO, payload, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         httpsAgent: this.agent,
         timeout: 30000
