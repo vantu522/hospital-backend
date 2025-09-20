@@ -197,7 +197,6 @@ class ImportController {
         const idKhoaKham = row["Mã Khoa Khám"];
         const idCongKhamBanDau = row["Mã Cổng Khám Ban Đầu"];
         const idLoaiKham = row["Mã Loại Khám"];
-      
 
         if (!id || !ma || !ten || !idKhoaKham || !idLoaiKham) {
           throw new Error(`Dòng ${index + 2}: Thiếu thông tin ID, Mã, Tên, Mã Khoa Khám hoặc Mã Loại Khám`);
@@ -209,9 +208,9 @@ class ImportController {
           ten: ten.toString().trim(),
           dia_chi: diaChi ? diaChi.toString().trim() : '',
           cap_quan_li: capQuanLi ? capQuanLi.toString().trim() : 'Phòng',
-          IdKhoaKham: idKhoaKham.toString().trim(),
-          IdLoaiKham: idLoaiKham.toString().trim(),
-          IdCongKhamBanDau: idCongKhamBanDau ? idCongKhamBanDau.toString().trim() : null,
+          IDKhoaKham: idKhoaKham.toString().trim(),
+          IDLoaiKham: idLoaiKham.toString().trim(),
+          IDCongKhamBanDau: idCongKhamBanDau ? idCongKhamBanDau.toString().trim() : null,
           is_active: true
         };
       });
@@ -313,7 +312,7 @@ class ImportController {
       }
 
       const docs = sheetData.map((row, index) => {
-        const id = row["Id"];
+        const id = row["ID"];
         const ma = row["Mã"];
         const ten = row["Tên"];
 
@@ -426,13 +425,13 @@ class ImportController {
       }
 
       const docs = sheetData.map((row, index) => {
-        // Chuẩn hóa key để tránh khoảng trắng
+        // Chuẩn hóa key để tránh khoảng trắng và đồng bộ "ID"
         const normalizedRow = {};
         Object.keys(row).forEach(key => {
-          normalizedRow[key.trim()] = row[key];
+          normalizedRow[key.trim() === 'Id' ? 'ID' : key.trim()] = row[key];
         });
 
-        const id = normalizedRow["Id"];
+        const id = normalizedRow["ID"];
         const ma_bv = normalizedRow["Mã BV"];
         const ma_bhyt = normalizedRow["Mã BHYT"];
         const ten_bv = normalizedRow["Tên BV"];
@@ -646,7 +645,7 @@ class ImportController {
     try {
       const templateData = [
         {
-          "Id": "CK001",
+          "ID": "CK001",
           "Mã BV": "C01",
           "Mã BHYT": "BH01", 
           "Tên BV": "Cổng khám số 1",

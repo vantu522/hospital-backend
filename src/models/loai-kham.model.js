@@ -9,7 +9,6 @@ const loaiKhamSchema = new mongoose.Schema(
     ma: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true
     },
