@@ -1,10 +1,18 @@
 import healthInsuranceExamRepository from '../repositories/health-insurance-exam.repository.js';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import axios from 'axios';
 import QRCode from 'qrcode';
 import https from 'https';
 import logger from '../../config/logger.js';
 
 class HealthInsuranceExamService {
+  getNowVN() {
+    return dayjs().tz('Asia/Ho_Chi_Minh').format('HH:mm DD/MM/YYYY');
+  }
 
   formatDisplayDateTime(date, showTimeComponent = true) {
     if (!date) return '';
@@ -659,11 +667,6 @@ class HealthInsuranceExamService {
       } else {
         logger.info('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: %s', exam.exam_type);
       }
-      function getNowVN() {
-      const nowUTC = new Date();
-      const offsetVN = 7 * 60; // phút
-      return new Date(nowUTC.getTime() + (offsetVN - nowUTC.getTimezoneOffset()) * 60000);
-      }
       // 4. Tạo payload
       const basePayload = {
         GioiTinh: exam.GioiTinh === 'Nam',
@@ -696,8 +699,8 @@ class HealthInsuranceExamService {
         DiaChi: exam.DiaChi,
         IdCanBoDonTiep: process.env.ID_CANBO_HIS || '3923362b-5ec4-4d11-ae0f-684001f67748',
         IdCongKhamBanDau: exam.IdCongKhamBanDau,
-        NgayKham: this.formatDisplayDateTime(new Date(getNowVN())),
-        NgayDonTiep: this.formatDisplayDateTime(new Date(getNowVN())),
+        NgayKham: this.getNowVN(),
+        NgayDonTiep: this.getNowVN(),
         Status: 0
       };
 
