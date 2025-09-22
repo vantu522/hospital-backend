@@ -149,67 +149,75 @@ class HealthInsuranceExamService {
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
   async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
-    logger.info(`🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT: ${JSON.stringify({ maThe, hoTen, ngaySinh })}`);
+  logger.info(`🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT: ${JSON.stringify({ maThe, hoTen, ngaySinh })}`);
 
-    logger.info(`🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
+  logger.info(`🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
 
-    const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
-    if (!bhytCheckUrl) {
-      logger.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
-      return { success: false, message: 'Cấu hình API BHYT không đúng' };
-    }
+  const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
+  if (!bhytCheckUrl) {
+    logger.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
+    return { success: false, message: 'Cấu hình API BHYT không đúng' };
+  }
 
-    logger.info('🔄 [BHYT_SERVICE] Getting token...');
-    let { token, id_token } = await this.getBHYTToken();
+  logger.info('🔄 [BHYT_SERVICE] Getting token...');
+  let { token, id_token } = await this.getBHYTToken();
 
-    let currentMaThe = maThe;
+  let currentMaThe = maThe;
 
-    const requestAPI = async (maTheToCheck) => {
-      const url = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
-      const body = { maThe: maTheToCheck, hoTen, ngaySinh, hoTenCb, cccdCb };
-      return await this.safePost(url, body);
-    };
+  const requestAPI = async (maTheToCheck) => {
+    const url = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+    const body = { maThe: maTheToCheck, hoTen, ngaySinh, hoTenCb, cccdCb };
+    return await this.safePost(url, body);
+  };
 
-    try {
-      let response = await requestAPI(currentMaThe);
+  try {
+    let response = await requestAPI(currentMaThe);
+
+    if (response.data?.maKetQua === "401") {
+      this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
+      ({ token, id_token } = await this.getBHYTToken());
+      await new Promise(r => setTimeout(r, 1000));
+      response = await requestAPI(currentMaThe);
 
       if (response.data?.maKetQua === "401") {
-        this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
-        ({ token, id_token } = await this.getBHYTToken());
-        await new Promise(r => setTimeout(r, 1000));
-        response = await requestAPI(currentMaThe);
-
-        if (response.data?.maKetQua === "401") {
-          return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
-        }
+        return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
       }
-
-      if (response.data?.maKetQua === "003" && response.data?.maTheMoi) {
-        logger.warn(`⚠️ [BHYT_SERVICE] Mã lỗi 003, chuyển sang maTheMoi: ${response.data.maTheMoi}`);
-        currentMaThe = response.data.maTheMoi;
-        response = await requestAPI(currentMaThe);
-      }
-
-      if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
-        const converted = this.convertBHYTToThirdParty(response.data);
-        logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
-        this.bhytResultCache[currentMaThe] = converted;
-        logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
-        return { success: true, data: response.data, converted };
-      } else {
-        logger.warn(`❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua: ${response.data?.maKetQua}`);
-        return {
-          success: false,
-          message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`,
-          code: response.data?.maKetQua,
-          data: response.data
-        };
-      }
-    } catch (err) {
-      logger.error(`❌ [BHYT_SERVICE] Lỗi khi check BHYT: ${err.message}`);
-      return { success: false, message: err.message };
     }
+
+    if (response.data?.maKetQua === "003" && response.data?.maTheMoi) {
+      logger.warn(`⚠️ [BHYT_SERVICE] Mã lỗi 003, chuyển sang maTheMoi: ${response.data.maTheMoi}`);
+      currentMaThe = response.data.maTheMoi;
+      response = await requestAPI(currentMaThe);
+    }
+
+    if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
+      const converted = this.convertBHYTToThirdParty(response.data);
+      logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
+      this.bhytResultCache[currentMaThe] = converted;
+      logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
+
+      // Gọi API kiểm tra trong DB
+      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
+      if (existingExam) {
+        logger.info(`✅ [BHYT_CHECK] Tìm thấy bản ghi trong DB với BHYT: ${converted.SoBHYT}`);
+        return { success: true, data: response.data, converted, existingExam };
+      }
+
+      return { success: true, data: response.data, converted };
+    } else {
+      logger.warn(`❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua: ${response.data?.maKetQua}`);
+      return {
+        success: false,
+        message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`,
+        code: response.data?.maKetQua,
+        data: response.data
+      };
+    }
+  } catch (err) {
+    logger.error(`❌ [BHYT_SERVICE] Lỗi khi check BHYT: ${err.message}`);
+    return { success: false, message: err.message };
   }
+}
 
   // === Cache templates với TTL để giảm DB query ===
   async getTemplatesCache() {
