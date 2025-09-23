@@ -65,20 +65,42 @@ class DoctorService {
    * Get all doctors with optional filters
    */
   async getAllDoctors(filters = {}) {
-    const queryFilters = {};
-    
-    if (filters.specialty) {
-      queryFilters.specialties = filters.specialty;
-    }
-
-    if (filters.is_active !== undefined) {
-      queryFilters.is_active = filters.is_active;
-    }
-
-    return await doctorRepository.find(queryFilters, {
-      populate: { path: 'specialties', select: 'name slug' }
-    });
+  const queryFilters = {};
+  
+  if (filters.specialty) {
+    queryFilters.specialties = filters.specialty;
   }
+
+  if (filters.is_active !== undefined) {
+    queryFilters.is_active = filters.is_active;
+  }
+
+  // Định nghĩa thứ tự ưu tiên dựa trên enum
+  const rolePriority = [
+    'GIAM_DOC',
+    'PHO_GIAM_DOC',
+    'TRUONG_PHONG',
+    'TRUONG_KHOA',
+    'PHO_TRUONG_KHOA',
+    'PHO_TRUONG_PHONG',
+    'DIEU_DUONG_TRUONG',
+    'KHAC'
+  ];
+
+  // Lấy danh sách bác sĩ và sắp xếp theo thứ tự ưu tiên
+  const doctors = await doctorRepository.find(queryFilters, {
+    populate: { path: 'specialties', select: 'name slug' }
+  });
+
+  // Sắp xếp danh sách bác sĩ theo thứ tự của rolePriority
+  doctors.sort((a, b) => {
+    const roleA = rolePriority.indexOf(a.role);
+    const roleB = rolePriority.indexOf(b.role);
+    return roleA - roleB;
+  });
+
+  return doctors;
+}
 
   /**
    * Get doctor by slug

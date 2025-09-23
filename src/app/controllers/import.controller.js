@@ -1,10 +1,11 @@
 import xlsx from 'xlsx';
 import fs from 'fs';
+import slugify from 'slugify';
 import KhoaKham from '../../models/khoa-kham.model.js';
 import PhongKham from '../../models/phong-kham.model.js';
 import LoaiKham from '../../models/loai-kham.model.js';
 import CongKham from '../../models/cong-kham.model.js';
-
+import Doctor from '../../models/doctor.model.js';
 class ImportController {
   /**
    * @swagger
@@ -670,6 +671,125 @@ class ImportController {
       });
     }
   }
+
+    /**
+   * @swagger
+   * /api/import/bac-si:
+   *   post:
+   *     tags: [Import]
+   *     summary: Import dữ liệu bác sĩ từ file Excel
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: File Excel (.xlsx hoặc .xls)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Import thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Import Doctor thành công
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalImported:
+   *                       type: integer
+   *                     records:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Doctor'
+   */
+  async importDoctor(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng chọn file Excel để import'
+      });
+    }
+
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    if (!sheetData || sheetData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'File Excel không có dữ liệu'
+      });
+    }
+
+    const docs = sheetData.map((row, index) => {
+      const fullName = row["Họ Tên"];
+      const department = row["Chuyên Khoa"];
+      const specialtyId = row["ID Chuyên Khoa"];
+
+      if (!fullName) {
+        throw new Error(`Dòng ${index + 2}: Thiếu thông tin Họ Tên`);
+      }
+
+      // Tạo slug
+      const nameSlug = slugify(fullName, { lower: true, locale: 'vi', strict: true });
+      const slug = `${nameSlug}`;
+
+      return {
+        full_name: fullName.toString().trim(),
+        department: department ? department.toString().trim() : '',
+        specialties: specialtyId ? specialtyId.toString().trim() : null,
+        slug // thêm slug
+        // các field khác sẽ lấy default trong schema
+      };
+    });
+
+    const result = await Doctor.insertMany(docs, { ordered: false });
+    fs.unlinkSync(req.file.path);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Import Doctor thành công',
+      data: { totalImported: result.length, records: result }
+    });
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    console.error('Import Doctor error:', error);
+    let statusCode = 500;
+    let message = error.message;
+
+    if (error.code === 11000) {
+      statusCode = 400;
+      message = 'Có dữ liệu trùng lặp trong file Excel hoặc database';
+    } else if (error.message.includes('Dòng')) {
+      statusCode = 400;
+    }
+
+    return res.status(statusCode).json({
+      success: false,
+      message: `Lỗi import Doctor: ${message}`
+    });
+  }
+}
+
 }
 
 export default new ImportController();

@@ -37,6 +37,7 @@ router.post('/khoa-kham',  upload.single('file'), importController.importKhoaKha
 router.post('/phong-kham', upload.single('file'), importController.importPhongKham);
 router.post('/loai-kham',  upload.single('file'), importController.importLoaiKham);
 router.post('/cong-kham',  upload.single('file'), importController.importCongKham);
+router.post('/bac-si', upload.single('file'), importController.importDoctor);
 // Routes cho download template (chỉ admin/superadmin)
 router.get('/khoa-kham/template', importController.downloadKhoaKhamTemplate);
 router.get('/phong-kham/template', importController.downloadPhongKhamTemplate);
