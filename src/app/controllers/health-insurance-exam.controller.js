@@ -706,12 +706,78 @@ const deleteExam = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/health-insurance-exams/by-cccd/{cccd}:
+ *   get:
+ *     summary: Tìm lịch khám theo CCCD
+ *     tags:
+ *       - HealthInsuranceExam
+ *     parameters:
+ *       - in: path
+ *         name: cccd
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Số CCCD của bệnh nhân
+ *     responses:
+ *       200:
+ *         description: Lịch khám được tìm thấy hoặc không có bản ghi nào
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: Luôn trả về true
+ *                 data:
+ *                   type: object
+ *                   nullable: true
+ *                   description: Bản ghi lịch khám nếu tìm thấy, hoặc null nếu không có
+ *       400:
+ *         description: Lỗi truy vấn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+const getExamByCCCD = async (req, res) => {
+  try {
+    const { cccd } = req.params;
+
+    if (!cccd) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin CCCD'
+      });
+    }
+
+    const exam = await healthInsuranceExamService.findOne({ CCCD: cccd });
+
+    return res.status(200).json({
+      success: true,
+      data: exam || null // Trả về null nếu không tìm thấy bản ghi
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 export default {
   createExam,
   getExamById,
   checkExamByEncodedId,
+  getExamByCCCD,
   checkBHYTCard,
   getAllExams,
   updateExam,
-  deleteExam
+  deleteExam,
 };
