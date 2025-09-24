@@ -422,73 +422,85 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-    // Sử dụng IdPhongKham cho slot và queue logic
-    const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.IdPhongKham, data.role);
+    const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
 
-    // Cập nhật lại giờ khám nếu có điều chỉnh
-    data.exam_time = adjustedTime;
-    data.status = data.role === 'receptionist' ? 'accept' : 'pending';
-    data.slotId = slot._id;
-    data.IdPhongKham = slot.IdPhongKham;
+    // Kiểm tra xem yêu cầu đang được xử lý hay không
+    if (this.bhytResultCache[lockKey]) {
+      throw new Error('Yêu cầu đang được xử lý. Vui lòng đợi.');
+    }
 
-    // Không sinh số thứ tự, số thứ tự sẽ lấy từ HIS trả về
+    // Đặt cờ để đánh dấu yêu cầu đang được xử lý
+    this.bhytResultCache[lockKey] = true;
 
-    // Parallel operations sau khi đã có order_number
-    const [exam, phongKhamObj] = await Promise.all([
-      healthInsuranceExamRepository.create(data),
-      (async () => {
-        const PhongKham = (await import('../../models/phong-kham.model.js')).default;
-        return PhongKham.findOne({ _id: data.IdPhongKham }, 'ten').lean();
-      })()
-    ]);
+    try {
+      // Sử dụng IdPhongKham cho slot và queue logic
+      const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.IdPhongKham, data.role);
 
-    let soXepHang = null;
+      // Cập nhật lại giờ khám nếu có điều chỉnh
+      data.exam_time = adjustedTime;
+      data.status = data.role === 'receptionist' ? 'accept' : 'pending';
+      data.slotId = slot._id;
+      data.IdPhongKham = slot.IdPhongKham;
 
-    // Nếu status là accept (role receptionist), đẩy ngay lên HIS và đợi kết quả
-    if (data.status === 'accept') {
-      logger.info('🏥 [HIS] Đẩy dữ liệu lên HIS cho bản ghi có status accept');
-      const hisResult = await this.pushToHIS(exam);
-      if (!hisResult.success) {
-        const errorDetails = hisResult.details && Object.keys(hisResult.details).length > 0
-          ? JSON.stringify(hisResult.details)
-          : hisResult.error;
-        throw new Error(`Không thể đẩy dữ liệu lên HIS: ${errorDetails}`);
+      // Parallel operations sau khi đã có order_number
+      const [exam, phongKhamObj] = await Promise.all([
+        healthInsuranceExamRepository.create(data),
+        (async () => {
+          const PhongKham = (await import('../../models/phong-kham.model.js')).default;
+          return PhongKham.findOne({ _id: data.IdPhongKham }, 'ten').lean();
+        })()
+      ]);
+
+      let soXepHang = null;
+
+      // Nếu status là accept (role receptionist), đẩy ngay lên HIS và đợi kết quả
+      if (data.status === 'accept') {
+        logger.info('🏥 [HIS] Đẩy dữ liệu lên HIS cho bản ghi có status accept');
+        const hisResult = await this.pushToHIS(exam);
+        if (!hisResult.success) {
+          const errorDetails = hisResult.details && Object.keys(hisResult.details).length > 0
+            ? JSON.stringify(hisResult.details)
+            : hisResult.error;
+          throw new Error(`Không thể đẩy dữ liệu lên HIS: ${errorDetails}`);
+        }
+
+        soXepHang = hisResult.data.SoXepHang;
+        logger.info('✅ [HIS] Đẩy dữ liệu lên HIS thành công');
       }
 
-      soXepHang = hisResult.data.SoXepHang;
-      logger.info('✅ [HIS] Đẩy dữ liệu lên HIS thành công');
+      // Tạo QR code
+      const encodedId = Buffer.from(exam._id.toString()).toString('base64');
+      const qrImageBase64 = await QRCode.toDataURL(encodedId);
+
+      // **Trả về ngay cho client**, kèm SoXepHang
+      const responseData = {
+        exam: {
+          ...exam.toObject(),
+          IdPhongKham: exam.IdPhongKham,
+          clinic: phongKhamObj?.ten || '',
+          SoXepHang: soXepHang // thêm field vào response
+        },
+        qr_code: qrImageBase64,
+        encoded_id: encodedId
+      };
+
+      // **Update DB sau, không chặn response**
+      if (soXepHang) {
+        setImmediate(async () => {
+          try {
+            await healthInsuranceExamRepository.update(exam._id, { SoXepHang: soXepHang });
+            logger.info('💾 [EXAM] Đã cập nhật SoXepHang vào DB cho exam:', exam._id);
+          } catch (err) {
+            logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang vào DB:', err.message);
+          }
+        });
+      }
+
+      return responseData;
+    } finally {
+      // Xóa cờ sau khi xử lý xong
+      delete this.bhytResultCache[lockKey];
     }
-
-    // Tạo QR code
-    const encodedId = Buffer.from(exam._id.toString()).toString('base64');
-    const qrImageBase64 = await QRCode.toDataURL(encodedId);
-
-    // **Trả về ngay cho client**, kèm SoXepHang
-    const responseData = {
-      exam: {
-        ...exam.toObject(),
-        IdPhongKham: exam.IdPhongKham,
-        clinic: phongKhamObj?.ten || '',
-        SoXepHang: soXepHang // thêm field vào response
-      },
-      qr_code: qrImageBase64,
-      encoded_id: encodedId
-    };
-
-    // **Update DB sau, không chặn response**
-    if (soXepHang) {
-      setImmediate(async () => {
-        try {
-          await healthInsuranceExamRepository.update(exam._id, { SoXepHang: soXepHang });
-          logger.info('💾 [EXAM] Đã cập nhật SoXepHang vào DB cho exam:', exam._id);
-        } catch (err) {
-          logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang vào DB:', err.message);
-        }
-      });
-    }
-
-    return responseData;
-
   }
 
   // === Check lịch khám theo QR code với parallel operations ===
