@@ -869,6 +869,9 @@ class HealthInsuranceExamService {
       throw new Error(`Không thể lấy lịch khám: ${error.message}`);
     }
   }
+  async findOne(filter) {
+    return await healthInsuranceExamRepository.findOne(filter);
+  }
 }
 
 export default new HealthInsuranceExamService();
