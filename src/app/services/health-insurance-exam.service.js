@@ -46,7 +46,7 @@ class HealthInsuranceExamService {
       return '';
     }
   }
-  
+
   //Khai báo agent 
   agent = new https.Agent({
     cert: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
@@ -157,75 +157,75 @@ class HealthInsuranceExamService {
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
   async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
-  logger.info(`🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT: ${JSON.stringify({ maThe, hoTen, ngaySinh })}`);
+    logger.info(`🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT: ${JSON.stringify({ maThe, hoTen, ngaySinh })}`);
 
-  logger.info(`🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
+    logger.info(`🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
 
-  const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
-  if (!bhytCheckUrl) {
-    logger.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
-    return { success: false, message: 'Cấu hình API BHYT không đúng' };
-  }
+    const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
+    if (!bhytCheckUrl) {
+      logger.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
+      return { success: false, message: 'Cấu hình API BHYT không đúng' };
+    }
 
-  logger.info('🔄 [BHYT_SERVICE] Getting token...');
-  let { token, id_token } = await this.getBHYTToken();
+    logger.info('🔄 [BHYT_SERVICE] Getting token...');
+    let { token, id_token } = await this.getBHYTToken();
 
-  let currentMaThe = maThe;
+    let currentMaThe = maThe;
 
-  const requestAPI = async (maTheToCheck) => {
-    const url = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
-    const body = { maThe: maTheToCheck, hoTen, ngaySinh, hoTenCb, cccdCb };
-    return await this.safePost(url, body);
-  };
+    const requestAPI = async (maTheToCheck) => {
+      const url = `${bhytCheckUrl}?id_token=${id_token}&password=${password}&token=${token}&username=${username}`;
+      const body = { maThe: maTheToCheck, hoTen, ngaySinh, hoTenCb, cccdCb };
+      return await this.safePost(url, body);
+    };
 
-  try {
-    let response = await requestAPI(currentMaThe);
-
-    if (response.data?.maKetQua === "401") {
-      this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
-      ({ token, id_token } = await this.getBHYTToken());
-      await new Promise(r => setTimeout(r, 1000));
-      response = await requestAPI(currentMaThe);
+    try {
+      let response = await requestAPI(currentMaThe);
 
       if (response.data?.maKetQua === "401") {
-        return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
-      }
-    }
+        this.bhytTokenCache = { token: null, id_token: null, expiresAt: null };
+        ({ token, id_token } = await this.getBHYTToken());
+        await new Promise(r => setTimeout(r, 1000));
+        response = await requestAPI(currentMaThe);
 
-    if (response.data?.maKetQua === "003" && response.data?.maTheMoi) {
-      logger.warn(`⚠️ [BHYT_SERVICE] Mã lỗi 003, chuyển sang maTheMoi: ${response.data.maTheMoi}`);
-      currentMaThe = response.data.maTheMoi;
-      response = await requestAPI(currentMaThe);
-    }
-
-    if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
-      const converted = this.convertBHYTToThirdParty(response.data);
-      logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
-      this.bhytResultCache[currentMaThe] = converted;
-      logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
-
-      // Gọi API kiểm tra trong DB
-      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
-      if (existingExam) {
-        logger.info(`✅ [BHYT_CHECK] Tìm thấy bản ghi trong DB với BHYT: ${converted.SoBHYT}`);
-        return { success: true, data: response.data, converted, existingExam };
+        if (response.data?.maKetQua === "401") {
+          return { success: false, message: response.data.ghiChu || "Token không đúng.", code: "401", data: response.data };
+        }
       }
 
-      return { success: true, data: response.data, converted };
-    } else {
-      logger.warn(`❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua: ${response.data?.maKetQua}`);
-      return {
-        success: false,
-        message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`,
-        code: response.data?.maKetQua,
-        data: response.data
-      };
+      if (response.data?.maKetQua === "003" && response.data?.maTheMoi) {
+        logger.warn(`⚠️ [BHYT_SERVICE] Mã lỗi 003, chuyển sang maTheMoi: ${response.data.maTheMoi}`);
+        currentMaThe = response.data.maTheMoi;
+        response = await requestAPI(currentMaThe);
+      }
+
+      if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
+        const converted = this.convertBHYTToThirdParty(response.data);
+        logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
+        this.bhytResultCache[currentMaThe] = converted;
+        logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
+
+        // Gọi API kiểm tra trong DB
+        const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
+        if (existingExam) {
+          logger.info(`✅ [BHYT_CHECK] Tìm thấy bản ghi trong DB với BHYT: ${converted.SoBHYT}`);
+          return { success: true, data: response.data, converted, existingExam };
+        }
+
+        return { success: true, data: response.data, converted };
+      } else {
+        logger.warn(`❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua: ${response.data?.maKetQua}`);
+        return {
+          success: false,
+          message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`,
+          code: response.data?.maKetQua,
+          data: response.data
+        };
+      }
+    } catch (err) {
+      logger.error(`❌ [BHYT_SERVICE] Lỗi khi check BHYT: ${err.message}`);
+      return { success: false, message: err.message };
     }
-  } catch (err) {
-    logger.error(`❌ [BHYT_SERVICE] Lỗi khi check BHYT: ${err.message}`);
-    return { success: false, message: err.message };
   }
-}
 
   // === Cache templates với TTL để giảm DB query ===
   async getTemplatesCache() {
@@ -558,7 +558,6 @@ class HealthInsuranceExamService {
   async getHISToken() {
     logger.info('🔑 [HIS] Kiểm tra token HIS');
 
-    // Kiểm tra token cache còn hạn không
     if (this.hisTokenCache.access_token && this.hisTokenCache.expiresAt > Date.now()) {
       logger.info('🔑 [HIS] Sử dụng token HIS đã cache');
       return this.hisTokenCache.access_token;
@@ -571,47 +570,40 @@ class HealthInsuranceExamService {
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
 
-      logger.info('🔑 [HIS] Đang lấy token mới từ: %s', API_LOGIN_HIS_DUCTHO);
+      logger.info(`🔑 [HIS] Đang lấy token mới từ: ${API_LOGIN_HIS_DUCTHO}`);
 
-      // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
       params.append('client_id', CLIENT_ID_HIS);
       params.append('grant_type', 'password');
       params.append('username', HIS_ACCOUNT);
       params.append('password', HIS_PASSWORD);
 
-      // Headers cho form-urlencoded
-      const headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      };
+      const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
-      // Gửi request với params và agent
       const response = await axios.post(API_LOGIN_HIS_DUCTHO, params, { headers, httpsAgent: this.agent });
 
-      logger.info('✅ [HIS] Nhận phản hồi từ server HIS: %s', response.status);
+      logger.info(`✅ [HIS] Nhận phản hồi từ server HIS: ${response.status}`);
 
       if (!response.data || !response.data.access_token) {
-        logger.error('❌ [HIS] Phản hồi không có access_token: %o', response.data);
+        logger.error('❌ [HIS] Phản hồi không có access_token', response.data);
         throw new Error('Không nhận được access_token từ HIS');
       }
 
-      // Cache token với thời hạn - giảm 60s để đảm bảo an toàn
-      const expiresIn = response.data.expires_in || 3600; // Mặc định 1 giờ nếu không có
+      const expiresIn = response.data.expires_in || 3600;
       this.hisTokenCache = {
         access_token: response.data.access_token,
         expiresAt: Date.now() + (expiresIn - 60) * 1000
       };
 
-      logger.info('🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau: %d giây', expiresIn);
+      logger.info(`🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau: ${expiresIn} giây`);
       return this.hisTokenCache.access_token;
-
     } catch (error) {
-      logger.error('❌ [HIS] Lỗi khi lấy token HIS: %s', error.message);
+      logger.error(`❌ [HIS] Lỗi khi lấy token HIS: ${error.message}`);
       throw new Error(`Không thể lấy token HIS: ${error.message}`);
     }
   }
   async pushToHIS(exam) {
-    logger.info('🏥 [HIS] Đẩy thông tin lên HIS: %s', exam._id);
+    logger.info(`🏥 [HIS] Đẩy thông tin lên HIS: ${exam._id}`);
 
     try {
       // 1. Lấy token trước khi gọi API
@@ -633,39 +625,39 @@ class HealthInsuranceExamService {
       const cccdKey = exam.CCCD;
 
       if (exam.exam_type === 'BHYT') {
-        logger.info('🔍 [BHYT_CACHE] Tổng số cache: %d', Object.keys(this.bhytResultCache).length);
-        logger.info('🔍 [BHYT_CACHE] Các khóa trong cache: %o', Object.keys(this.bhytResultCache));
-        logger.info('🔍 [BHYT_CACHE] Kiểm tra mã BHYT: %s, CCCD: %s', bhytKey, cccdKey);
+        logger.info(`🔍 [BHYT_CACHE] Tổng số cache: ${Object.keys(this.bhytResultCache).length}`);
+        logger.info(`🔍 [BHYT_CACHE] Các khóa trong cache: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
+        logger.info(`🔍 [BHYT_CACHE] Kiểm tra mã BHYT: ${bhytKey}, CCCD: ${cccdKey}`);
 
         if (bhytKey && this.bhytResultCache[bhytKey]) {
           try {
             const cachedData = this.bhytResultCache[bhytKey];
-            logger.info('🔍 [BHYT_CACHE] Dữ liệu BHYT từ cache: %o', cachedData);
+            logger.info(`🔍 [BHYT_CACHE] Dữ liệu BHYT từ cache: ${JSON.stringify(cachedData)}`);
 
             if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
               dmBHYT = cachedData;
-              logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT): %s', bhytKey);
+              logger.info(`🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT): ${bhytKey}`);
             } else {
               logger.warn('🏥 [HIS] Dữ liệu BHYT cache không hợp lệ');
             }
           } catch (err) {
-            logger.error('❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache: %s', err.message);
+            logger.error(`❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache: ${err.message}`);
           }
         }
 
         if (!dmBHYT && cccdKey && this.bhytResultCache[cccdKey]) {
           try {
             const cachedData = this.bhytResultCache[cccdKey];
-            logger.info('🔍 [BHYT_CACHE] Dữ liệu cache từ CCCD: %o', cachedData);
+            logger.info(`🔍 [BHYT_CACHE] Dữ liệu cache từ CCCD: ${JSON.stringify(cachedData)}`);
 
             if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
               dmBHYT = cachedData;
-              logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD): %s', cccdKey);
+              logger.info(`🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD): ${cccdKey}`);
             } else {
               logger.warn('🏥 [HIS] Dữ liệu BHYT cache từ CCCD không hợp lệ');
             }
           } catch (err) {
-            logger.error('❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache (CCCD): %s', err.message);
+            logger.error(`❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache (CCCD): ${err.message}`);
           }
         }
 
@@ -673,8 +665,9 @@ class HealthInsuranceExamService {
           logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache cho BHYT và CCCD');
         }
       } else {
-        logger.info('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: %s', exam.exam_type);
+        logger.info(`🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: ${exam.exam_type}`);
       }
+
       // 4. Tạo payload
       const basePayload = {
         GioiTinh: exam.GioiTinh === 'Nam',
@@ -713,12 +706,19 @@ class HealthInsuranceExamService {
       };
 
       const payload = exam.exam_type === 'BHYT'
-        ? { ...basePayload, ...(dmBHYT && { DmBHYT: dmBHYT }), IsBHYT: !!dmBHYT, IsDungTuyen: !!dmBHYT, SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT, CMND: exam.CCCD }
+        ? {
+          ...basePayload,
+          ...(dmBHYT && { DmBHYT: dmBHYT }),
+          IsBHYT: !!dmBHYT,
+          IsDungTuyen: !!dmBHYT,
+          SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
+          CMND: exam.CCCD
+        }
         : basePayload;
 
-  logger.info('🏥 [HIS] Payload gửi lên HIS: %o', payload);
-  logger.info(`[LOG] NgayKham:`, payload.NgayKham);
-  logger.info(`[LOG] NgayDonTiep:`, payload.NgayDonTiep);
+      logger.info(`🏥 [HIS] Payload gửi lên HIS: ${JSON.stringify(payload)}`);
+      logger.info(`[LOG] NgayKham: ${payload.NgayKham}`);
+      logger.info(`[LOG] NgayDonTiep: ${payload.NgayDonTiep}`);
 
       // 5. Gọi API
       const response = await axios.post(API_PUSH_TO_HIS_DUCTHO, payload, {
@@ -727,11 +727,11 @@ class HealthInsuranceExamService {
         timeout: 30000
       });
 
-      logger.info('✅ [HIS] Phản hồi HIS: %s %s', response.status, response.statusText);
-      logger.info('✅ [HIS] Data phản hồi: %o', response.data);
+      logger.info(`✅ [HIS] Phản hồi HIS: ${response.status} ${response.statusText}`);
+      logger.info(`✅ [HIS] Data phản hồi: ${JSON.stringify(response.data)}`);
 
       if (response.data && response.data.statusCode && response.data.statusCode !== 200) {
-        logger.error('❌ [HIS] API trả về mã lỗi: %s', response.data.statusCode);
+        logger.error(`❌ [HIS] API trả về mã lỗi: ${response.data.statusCode}`);
         return { success: false, error: `API HIS trả về mã lỗi: ${response.data.statusCode}`, details: response.data };
       }
 
@@ -740,11 +740,11 @@ class HealthInsuranceExamService {
         return { success: false, error: 'API HIS trả về dữ liệu rỗng', details: response.data };
       }
 
-      logger.info('✅ [HIS] Đẩy thông tin HIS thành công: %s', exam._id);
+      logger.info(`✅ [HIS] Đẩy thông tin HIS thành công: ${exam._id}`);
       return { success: true, data: response.data };
 
     } catch (error) {
-      logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu HIS: %s | Bệnh nhân: %s (ID: %s)', error.message, exam.HoTen, exam._id);
+      logger.error(`❌ [HIS] Lỗi khi đẩy dữ liệu HIS: ${error.message} | Bệnh nhân: ${exam.HoTen} (ID: ${exam._id})`);
       return { success: false, error: error.message, details: error.response?.data || {} };
     } finally {
       // Xóa cache BHYT sau khi push
@@ -752,19 +752,20 @@ class HealthInsuranceExamService {
       const cccdKey = exam.CCCD;
       if (bhytKey && this.bhytResultCache[bhytKey]) {
         delete this.bhytResultCache[bhytKey];
-        logger.info('🧹 [BHYT_CACHE] Xóa cache BHYT: %s', bhytKey);
+        logger.info(`🧹 [BHYT_CACHE] Xóa cache BHYT: ${bhytKey}`);
       }
       if (cccdKey && this.bhytResultCache[cccdKey]) {
         delete this.bhytResultCache[cccdKey];
-        logger.info('🧹 [BHYT_CACHE] Xóa cache CCCD: %s', cccdKey);
+        logger.info(`🧹 [BHYT_CACHE] Xóa cache CCCD: ${cccdKey}`);
       }
-      logger.info('🧹 [BHYT_CACHE] Số lượng cache còn lại: %d', Object.keys(this.bhytResultCache).length);
+      logger.info(`🧹 [BHYT_CACHE] Số lượng cache còn lại: ${Object.keys(this.bhytResultCache).length}`);
     }
   }
 
-  // === Lấy tất cả lịch khám với phân trang ===
+
+  // === Lấy danh sách lịch khám ===
   async getAllExams(options = {}) {
-    logger.info('🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options: %o', options);
+    logger.info(`🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options: ${JSON.stringify(options)}`);
 
     try {
       // Xử lý tham số đầu vào
@@ -798,19 +799,18 @@ class HealthInsuranceExamService {
       // Lấy dữ liệu từ repository
       const result = await healthInsuranceExamRepository.findAll(queryOptions);
 
-      logger.info('✅ [EXAM_SERVICE] Lấy thành công %d/%d lịch khám', result.data.length, result.total);
+      logger.info(`✅ [EXAM_SERVICE] Lấy thành công ${result.data.length}/${result.total} lịch khám`);
       return result;
 
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám: ${error.message}`);
       throw new Error(`Không thể lấy danh sách lịch khám: ${error.message}`);
     }
   }
 
-  // Helper method để thêm thông tin phòng khám vào danh sách lịch khám
   // === Cập nhật thông tin lịch khám ===
   async updateExam(id, data) {
-    logger.info('🔄 [EXAM_SERVICE] Cập nhật lịch khám: %s', id);
+    logger.info(`🔄 [EXAM_SERVICE] Cập nhật lịch khám: ${id}`);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
@@ -827,17 +827,17 @@ class HealthInsuranceExamService {
 
       const updatedExam = await healthInsuranceExamRepository.update(id, allowedUpdates);
 
-      logger.info('✅ [EXAM_SERVICE] Cập nhật lịch khám thành công: %s', id);
+      logger.info(`✅ [EXAM_SERVICE] Cập nhật lịch khám thành công: ${id}`);
       return updatedExam;
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám: ${error.message}`);
       throw new Error(`Không thể cập nhật lịch khám: ${error.message}`);
     }
   }
 
   // === Xóa lịch khám ===
   async deleteExam(id) {
-    logger.info('🗑️ [EXAM_SERVICE] Xóa lịch khám: %s', id);
+    logger.info(`🗑️ [EXAM_SERVICE] Xóa lịch khám: ${id}`);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
@@ -848,10 +848,10 @@ class HealthInsuranceExamService {
       // Soft delete
       await healthInsuranceExamRepository.remove(id);
 
-      logger.info('✅ [EXAM_SERVICE] Xóa lịch khám thành công: %s', id);
+      logger.info(`✅ [EXAM_SERVICE] Xóa lịch khám thành công: ${id}`);
       return { success: true, message: 'Xóa lịch khám thành công' };
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám: ${error.message}`);
       throw new Error(`Không thể xóa lịch khám: ${error.message}`);
     }
   }
@@ -865,10 +865,11 @@ class HealthInsuranceExamService {
       }
       return exam;
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy lịch khám theo ID: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi lấy lịch khám theo ID: ${error.message}`);
       throw new Error(`Không thể lấy lịch khám: ${error.message}`);
     }
   }
+
   async findOne(filter) {
     return await healthInsuranceExamRepository.findOne(filter);
   }
