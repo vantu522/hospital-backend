@@ -17,6 +17,8 @@ router.get('/check/:encoded_id', healthInsuranceExamController.checkExamByEncode
 // Kiểm tra ngày hiệu lực/ngày hết hạn thẻ BHYT
 router.post('/check-bhyt-date', healthInsuranceExamController.checkBHYTCard);
 
+// Lấy lịch khám theo CCCD
+router.get('/by-cccd/:cccd', healthInsuranceExamController.getExamByCCCD);
 // Lấy lịch khám theo id
 router.get('/:id', healthInsuranceExamController.getExamById);
 
