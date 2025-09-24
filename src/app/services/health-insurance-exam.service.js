@@ -414,6 +414,17 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
+  const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
+
+  // Kiểm tra xem yêu cầu đang được xử lý hay không
+  if (this.bhytResultCache[lockKey]) {
+    throw new Error('Yêu cầu đang được xử lý. Vui lòng đợi.');
+  }
+
+  // Đặt cờ để đánh dấu yêu cầu đang được xử lý
+  this.bhytResultCache[lockKey] = true;
+
+  try {
     // Sử dụng IdPhongKham cho slot và queue logic
     const { slot, adjustedTime } = await this.getOrCreateSlot(data.exam_date, data.exam_time, data.IdPhongKham, data.role);
 
@@ -422,8 +433,6 @@ class HealthInsuranceExamService {
     data.status = data.role === 'receptionist' ? 'accept' : 'pending';
     data.slotId = slot._id;
     data.IdPhongKham = slot.IdPhongKham;
-
-    // Không sinh số thứ tự, số thứ tự sẽ lấy từ HIS trả về
 
     // Parallel operations sau khi đã có order_number
     const [exam, phongKhamObj] = await Promise.all([
@@ -480,8 +489,11 @@ class HealthInsuranceExamService {
     }
 
     return responseData;
-
+  } finally {
+    // Xóa cờ sau khi xử lý xong
+    delete this.bhytResultCache[lockKey];
   }
+}
 
   // === Check lịch khám theo QR code với parallel operations ===
   async checkExamByEncodedId(encodedId) {
