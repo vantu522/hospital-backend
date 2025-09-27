@@ -480,10 +480,14 @@ class HealthInsuranceExamService {
     if (soXepHang) {
       setImmediate(async () => {
         try {
-          await healthInsuranceExamRepository.update(exam._id, { SoXepHang: soXepHang });
-          logger.info('💾 [EXAM] Đã cập nhật SoXepHang vào DB cho exam:', exam._id);
+          await healthInsuranceExamRepository.update(exam._id, {
+            SoXepHang: soXepHang,
+            qr_code: qrImageBase64,
+            encoded_id: encodedId
+          });
+          logger.info('💾 [EXAM] Đã cập nhật SoXepHang, qr_code, encoded_id vào DB cho exam:', exam._id);
         } catch (err) {
-          logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang vào DB:', err.message);
+          logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang/qr_code/encoded_id vào DB:', err.message);
         }
       });
     }

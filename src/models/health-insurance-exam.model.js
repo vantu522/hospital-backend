@@ -65,6 +65,8 @@ const HealthInsuranceExamSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'accept', 'reject'], default: 'pending' },
   is_priority: { type: Boolean, default: false },
   order_number: { type: Number, default: null },
+  qr_code: String,
+  encoded_id: String,
 }, { timestamps: true });
 
 // Performance indexes
