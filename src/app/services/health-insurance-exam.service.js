@@ -657,48 +657,12 @@ class HealthInsuranceExamService {
       const clinic = await PhongKham.findById(exam.IdPhongKham).lean();
 
       let dmBHYT = null;
-      const bhytKey = exam.BHYT;
-      const cccdKey = exam.CCCD;
-
       if (exam.exam_type === 'BHYT') {
-        logger.info('🔍 [BHYT_CACHE] Tổng số cache: %d', Object.keys(this.bhytResultCache).length);
-        logger.info('🔍 [BHYT_CACHE] Các khóa trong cache: %o', Object.keys(this.bhytResultCache));
-        logger.info('🔍 [BHYT_CACHE] Kiểm tra mã BHYT: %s, CCCD: %s', bhytKey, cccdKey);
-
-        if (bhytKey && this.bhytResultCache[bhytKey]) {
-          try {
-            const cachedData = this.bhytResultCache[bhytKey];
-            logger.info('🔍 [BHYT_CACHE] Dữ liệu BHYT từ cache: %o', cachedData);
-
-            if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
-              dmBHYT = cachedData;
-              logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã BHYT): %s', bhytKey);
-            } else {
-              logger.warn('🏥 [HIS] Dữ liệu BHYT cache không hợp lệ');
-            }
-          } catch (err) {
-            logger.error('❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache: %s', err.message);
-          }
-        }
-
-        if (!dmBHYT && cccdKey && this.bhytResultCache[cccdKey]) {
-          try {
-            const cachedData = this.bhytResultCache[cccdKey];
-            logger.info('🔍 [BHYT_CACHE] Dữ liệu cache từ CCCD: %o', cachedData);
-
-            if (cachedData && typeof cachedData === 'object' && cachedData.SoBHYT && cachedData.HoVaTen) {
-              dmBHYT = cachedData;
-              logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ cache (mã CCCD): %s', cccdKey);
-            } else {
-              logger.warn('🏥 [HIS] Dữ liệu BHYT cache từ CCCD không hợp lệ');
-            }
-          } catch (err) {
-            logger.error('❌ [HIS] Lỗi xử lý dữ liệu BHYT từ cache (CCCD): %s', err.message);
-          }
-        }
-
-        if (!dmBHYT && (bhytKey || cccdKey)) {
-          logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong cache cho BHYT và CCCD');
+        if (exam.dmBHYT) {
+          dmBHYT = exam.dmBHYT;
+          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB');
+        } else {
+          logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này');
         }
       } else {
         logger.info('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: %s', exam.exam_type);
