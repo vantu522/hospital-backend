@@ -477,17 +477,27 @@ class HealthInsuranceExamService {
     };
 
     // **Update DB sau, không chặn response**
+    // Sau khi tạo QR code, luôn lưu qr_code và encoded_id vào DB
+    setImmediate(async () => {
+      try {
+        await healthInsuranceExamRepository.update(exam._id, {
+          qr_code: qrImageBase64,
+          encoded_id: encodedId
+        });
+        logger.info('💾 [EXAM] Đã cập nhật qr_code, encoded_id vào DB cho exam:', exam._id);
+      } catch (err) {
+        logger.error('❌ [EXAM] Lỗi khi cập nhật qr_code/encoded_id vào DB:', err.message);
+      }
+    });
+
+    
     if (soXepHang) {
       setImmediate(async () => {
         try {
-          await healthInsuranceExamRepository.update(exam._id, {
-            SoXepHang: soXepHang,
-            qr_code: qrImageBase64,
-            encoded_id: encodedId
-          });
-          logger.info('💾 [EXAM] Đã cập nhật SoXepHang, qr_code, encoded_id vào DB cho exam:', exam._id);
+          await healthInsuranceExamRepository.update(exam._id, { SoXepHang: soXepHang });
+          logger.info('💾 [EXAM] Đã cập nhật SoXepHang vào DB cho exam:', exam._id);
         } catch (err) {
-          logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang/qr_code/encoded_id vào DB:', err.message);
+          logger.error('❌ [EXAM] Lỗi khi cập nhật SoXepHang vào DB:', err.message);
         }
       });
     }
