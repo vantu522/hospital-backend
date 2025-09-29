@@ -32,6 +32,18 @@ const options = {
         }
       },
       schemas: {
+        TimeSlotTemplate: {
+          type: 'object',
+          required: ['time', 'capacity'],
+          properties: {
+            _id: { type: 'string', description: 'ID khung giờ' },
+            time: { type: 'string', description: 'Khung giờ (HH:mm)' },
+            capacity: { type: 'integer', description: 'Số lượng tối đa' },
+            is_active: { type: 'boolean', default: true, description: 'Trạng thái hoạt động' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         ClinicRoom: {
           type: 'object',
           required: ['name', 'rooms'],
