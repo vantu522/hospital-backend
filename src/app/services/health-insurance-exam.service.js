@@ -678,7 +678,7 @@ class HealthInsuranceExamService {
         IdQuocTich: exam.IdQuocTich,
         MaDoiTuongKCB:
           exam.exam_type === 'BHYT'
-            ? (exam.dmBHYT && exam.dmBHYT.NoiDKBD === exam.dmBHYT.DOMAIN ? '1.1' : '3.3')
+            ? (dmBHYT && dmBHYT.NoiDKBD === dmBHYT.DOMAIN ? '1.1' : '3.3')
             : '9',
         MaTinh: exam.MaTinh,
         TenTinh: exam.TenTinh,
