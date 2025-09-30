@@ -548,18 +548,13 @@ class HealthInsuranceExamService {
       logger.info('🏥 [HIS] Đẩy dữ liệu lên HIS sau khi update status');
       const hisResult = await this.pushToHIS(exam);
       if (!hisResult.success) {
-        logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:');
-        logger.error('Exam ID:', exam._id);
-        logger.error('Payload gửi lên HIS:', JSON.stringify(exam));
-        logger.error('HIS response:', JSON.stringify(hisResult));
-        if (hisResult.details) logger.error('Chi tiết lỗi HIS:', JSON.stringify(hisResult.details));
-        if (hisResult.error) logger.error('Thông báo lỗi HIS:', hisResult.error);
+        logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:',
+          hisResult.details ? JSON.stringify(hisResult.details) : hisResult.error);
         return {
           success: true,
           message: 'Lịch khám hợp lệ, check-in thành công. Lưu ý: Không thể đồng bộ với HIS.',
           data: exam,
-          warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.',
-          his_error: hisResult
+          warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.'
         };
       }
       // Gán số thứ tự từ HIS trả về cho object trả response
@@ -646,7 +641,7 @@ class HealthInsuranceExamService {
     }
   }
   async pushToHIS(exam) {
-    logger.info('🏥 [HIS] Đẩy thông tin lên HIS: %s', exam._id);
+  logger.info(`🏥 [HIS] Đẩy thông tin lên HIS: ${exam._id}`);
 
     try {
       // 1. Lấy token trước khi gọi API
@@ -658,7 +653,7 @@ class HealthInsuranceExamService {
         throw new Error('Thiếu cấu hình API_PUSH_TO_HIS_333');
       }
 
-      logger.info('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
+  logger.info('🏥 [HIS] Chuẩn bị dữ liệu để gửi lên HIS');
 
       const PhongKham = (await import('../../models/phong-kham.model.js')).default;
       const clinic = await PhongKham.findById(exam.IdPhongKham).lean();
@@ -672,7 +667,7 @@ class HealthInsuranceExamService {
           logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này');
         }
       } else {
-        logger.info('🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: %s', exam.exam_type);
+  logger.info(`🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: ${exam.exam_type}`);
       }
 
       // 4. Tạo payload
@@ -716,10 +711,17 @@ class HealthInsuranceExamService {
       };
 
       const payload = exam.exam_type === 'BHYT'
-        ? { ...basePayload, ...(dmBHYT && { DmBHYT: dmBHYT }), IsBHYT: !!dmBHYT, IsDungTuyen: !!dmBHYT, SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT, CMND: exam.CCCD }
+        ? {
+            ...basePayload,
+            ...(exam.dmBHYT && { DmBHYT: exam.dmBHYT }),
+            IsBHYT: !!exam.dmBHYT,
+            IsDungTuyen: !!exam.dmBHYT,
+            SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
+            CMND: exam.CCCD
+          }
         : basePayload;
 
-      logger.info('🏥 [HIS] Payload gửi lên HIS: %o', payload);
+  logger.info(`🏥 [HIS] Payload gửi lên HIS: ${JSON.stringify(payload)}`);
 
       // 5. Gọi API
       const response = await axios.post(API_PUSH_TO_HIS_333, payload, {
@@ -728,24 +730,24 @@ class HealthInsuranceExamService {
         timeout: 30000
       });
 
-      logger.info('✅ [HIS] Phản hồi HIS: %s %s', response.status, response.statusText);
-      logger.info('✅ [HIS] Data phản hồi: %o', response.data);
+  logger.info(`✅ [HIS] Phản hồi HIS: ${response.status} ${response.statusText}`);
+  logger.info(`✅ [HIS] Data phản hồi: ${JSON.stringify(response.data)}`);
 
       if (response.data && response.data.statusCode && response.data.statusCode !== 200) {
-        logger.error('❌ [HIS] API trả về mã lỗi: %s', response.data.statusCode);
+  logger.error(`❌ [HIS] API trả về mã lỗi: ${response.data.statusCode}`);
         return { success: false, error: `API HIS trả về mã lỗi: ${response.data.statusCode}`, details: response.data };
       }
 
       if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
-        logger.error('❌ [HIS] API trả về dữ liệu rỗng');
+  logger.error('❌ [HIS] API trả về dữ liệu rỗng');
         return { success: false, error: 'API HIS trả về dữ liệu rỗng', details: response.data };
       }
 
-      logger.info('✅ [HIS] Đẩy thông tin HIS thành công: %s', exam._id);
+  logger.info(`✅ [HIS] Đẩy thông tin HIS thành công: ${exam._id}`);
       return { success: true, data: response.data };
 
     } catch (error) {
-      logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu HIS: %s | Bệnh nhân: %s (ID: %s)', error.message, exam.HoTen, exam._id);
+  logger.error(`❌ [HIS] Lỗi khi đẩy dữ liệu HIS: ${error.message} | Bệnh nhân: ${exam.HoTen} (ID: ${exam._id})`);
       return { success: false, error: error.message, details: error.response?.data || {} };
     } finally {
       // Xóa cache BHYT sau khi push
@@ -753,13 +755,13 @@ class HealthInsuranceExamService {
       const cccdKey = exam.CCCD;
       if (bhytKey && this.bhytResultCache[bhytKey]) {
         delete this.bhytResultCache[bhytKey];
-        logger.info('🧹 [BHYT_CACHE] Xóa cache BHYT: %s', bhytKey);
+  logger.info(`🧹 [BHYT_CACHE] Xóa cache BHYT: ${bhytKey}`);
       }
       if (cccdKey && this.bhytResultCache[cccdKey]) {
         delete this.bhytResultCache[cccdKey];
-        logger.info('🧹 [BHYT_CACHE] Xóa cache CCCD: %s', cccdKey);
+  logger.info(`🧹 [BHYT_CACHE] Xóa cache CCCD: ${cccdKey}`);
       }
-      logger.info('🧹 [BHYT_CACHE] Số lượng cache còn lại: %d', Object.keys(this.bhytResultCache).length);
+  logger.info(`🧹 [BHYT_CACHE] Số lượng cache còn lại: ${Object.keys(this.bhytResultCache).length}`);
     }
   }
 
