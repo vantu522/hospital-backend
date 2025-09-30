@@ -548,13 +548,18 @@ class HealthInsuranceExamService {
       logger.info('🏥 [HIS] Đẩy dữ liệu lên HIS sau khi update status');
       const hisResult = await this.pushToHIS(exam);
       if (!hisResult.success) {
-        logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:',
-          hisResult.details ? JSON.stringify(hisResult.details) : hisResult.error);
+        logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:');
+        logger.error('Exam ID:', exam._id);
+        logger.error('Payload gửi lên HIS:', JSON.stringify(exam));
+        logger.error('HIS response:', JSON.stringify(hisResult));
+        if (hisResult.details) logger.error('Chi tiết lỗi HIS:', JSON.stringify(hisResult.details));
+        if (hisResult.error) logger.error('Thông báo lỗi HIS:', hisResult.error);
         return {
           success: true,
           message: 'Lịch khám hợp lệ, check-in thành công. Lưu ý: Không thể đồng bộ với HIS.',
           data: exam,
-          warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.'
+          warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.',
+          his_error: hisResult
         };
       }
       // Gán số thứ tự từ HIS trả về cho object trả response
