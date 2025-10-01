@@ -203,7 +203,13 @@ class HealthInsuranceExamService {
         logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
         this.bhytResultCache[currentMaThe] = converted;
         logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
-
+        if (currentMaThe !== maThe) {
+          this.bhytResultCache[maThe] = converted;
+        }
+        if (converted?.CCCD || converted?.SoCCCD) {
+          const cccdKey = converted.CCCD || converted.SoCCCD;
+          this.bhytResultCache[cccdKey] = converted;
+        }
         // Gọi API kiểm tra trong DB
         const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
         if (existingExam) {
