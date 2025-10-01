@@ -496,6 +496,20 @@ class HealthInsuranceExamService {
       };
 
       // **Update DB sau, không chặn response**
+      if (data.role !== 'receptionist') {
+      setImmediate(async () => {
+        try {
+          await healthInsuranceExamRepository.update(exam._id, {
+            qr_code: qrImageBase64,
+            encoded_id: encodedId
+          });
+          logger.info('💾 [EXAM] Đã cập nhật qr_code, encoded_id vào DB cho exam:', exam._id);
+        } catch (err) {
+          logger.error('❌ [EXAM] Lỗi khi cập nhật qr_code/encoded_id vào DB:', err.message);
+        }
+      });
+    }
+    
       if (soXepHang) {
         setImmediate(async () => {
           try {
