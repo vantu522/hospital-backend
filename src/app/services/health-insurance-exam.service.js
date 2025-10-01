@@ -422,6 +422,17 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
+    // Lấy thông tin BHYT từ cache (nếu có) và lưu vào data.dmBHYT
+    let dmBHYT = null;
+    if (data.BHYT && this.bhytResultCache[data.BHYT]) {
+      dmBHYT = this.bhytResultCache[data.BHYT];
+    } else if (data.CCCD && this.bhytResultCache[data.CCCD]) {
+      dmBHYT = this.bhytResultCache[data.CCCD];
+    }
+    if (dmBHYT) {
+      data.dmBHYT = dmBHYT;
+    }
+    
     const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
 
     // Kiểm tra xem yêu cầu đang được xử lý hay không
