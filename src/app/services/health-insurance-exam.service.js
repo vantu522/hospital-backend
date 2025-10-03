@@ -750,6 +750,18 @@ class HealthInsuranceExamService {
       }
 
       logger.info(`✅ [HIS] Đẩy thông tin HIS thành công: ${exam._id}`);
+
+        
+      // Cập nhật trạng thái đã đẩy lên HIS thành công
+      setImmediate(async () => {
+        try {
+          await healthInsuranceExamRepository.update(exam._id, { is_pushed_to_his: true });
+          logger.info(`💾 [HIS] Đã cập nhật is_pushed_to_his = true cho exam: ${exam._id}`);
+        } catch (err) {
+          logger.error(`❌ [HIS] Lỗi khi cập nhật is_pushed_to_his: ${err.message}`);
+        }
+      });
+      
       return { success: true, data: response.data };
 
     } catch (error) {
