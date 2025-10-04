@@ -28,7 +28,8 @@ const options = {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
+          bearerFormat: 'JWT',
+          description: 'Enter JWT Bearer token in format: your-jwt-token-here'
         }
       },
       schemas: {
@@ -712,6 +713,1869 @@ const options = {
     './src/app/controllers/*.js'
   ]
 };
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Authentication
+ *     description: User authentication and management
+ *   - name: Health Insurance Exams
+ *     description: Health insurance exam booking and management
+ *   - name: Customers
+ *     description: Customer registration and login
+ *   - name: Time Slot Templates
+ *     description: Time slot template management
+ *   - name: Schedule Slots
+ *     description: Schedule slot management
+ *   - name: Import
+ *     description: Data import functionality
+ *   - name: Khoa Kham
+ *     description: Department management
+ *   - name: Phong Kham
+ *     description: Clinic room management
+ *   - name: Loai Kham
+ *     description: Exam type management
+ *   - name: Cong Kham
+ *     description: Exam gate management
+ *   - name: Clinic Rooms
+ *     description: Clinic room specialties management
+ */
+
+/**
+ * @swagger
+ * /api/users/login:
+ *   post:
+ *     summary: User login
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   post:
+ *     summary: Create new user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['name', 'email', 'password', 'role']
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: ['admin', 'doctor', 'user']
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/customers/register:
+ *   post:
+ *     summary: Customer registration
+ *     tags: [Customers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['HoTen', 'DienThoai', 'MatKhau']
+ *             properties:
+ *               HoTen:
+ *                 type: string
+ *                 description: Full name
+ *               DienThoai:
+ *                 type: string
+ *                 description: Phone number
+ *               MatKhau:
+ *                 type: string
+ *                 description: Password
+ *               Email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address
+ *               CCCD:
+ *                 type: string
+ *                 description: Citizen ID
+ *               NgaySinh:
+ *                 type: string
+ *                 format: date
+ *                 description: Date of birth
+ *               GioiTinh:
+ *                 type: string
+ *                 enum: ['Nam', 'Nữ']
+ *                 description: Gender
+ *               DiaChi:
+ *                 type: string
+ *                 description: Address
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/customers/login:
+ *   post:
+ *     summary: Customer login
+ *     tags: [Customers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['DienThoai', 'MatKhau']
+ *             properties:
+ *               DienThoai:
+ *                 type: string
+ *                 description: Phone number
+ *               MatKhau:
+ *                 type: string
+ *                 description: Password
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT token
+ *                 customer:
+ *                   type: object
+ *                   description: Customer information
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/customers/receptionist:
+ *   post:
+ *     summary: Create receptionist account
+ *     tags: [Customers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['HoTen', 'DienThoai', 'MatKhau']
+ *             properties:
+ *               HoTen:
+ *                 type: string
+ *                 description: Full name
+ *               DienThoai:
+ *                 type: string
+ *                 description: Phone number
+ *               MatKhau:
+ *                 type: string
+ *                 description: Password
+ *               Email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address
+ *     responses:
+ *       201:
+ *         description: Receptionist created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/all:
+ *   get:
+ *     summary: Get all health insurance exams with pagination
+ *     tags: [Health Insurance Exams]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: ['pending', 'accept', 'reject']
+ *         description: Filter by status
+ *       - in: query
+ *         name: exam_type
+ *         schema:
+ *           type: string
+ *           enum: ['BHYT', 'DV']
+ *         description: Filter by exam type
+ *       - in: query
+ *         name: exam_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by exam date
+ *     responses:
+ *       200:
+ *         description: List of health insurance exams
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/HealthInsuranceExam'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/book:
+ *   post:
+ *     summary: Book health insurance exam
+ *     tags: [Health Insurance Exams]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/HealthInsuranceExam'
+ *     responses:
+ *       201:
+ *         description: Exam booked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exam:
+ *                   $ref: '#/components/schemas/HealthInsuranceExam'
+ *                 qr_code:
+ *                   type: string
+ *                   description: QR code image base64
+ *                 encoded_id:
+ *                   type: string
+ *                   description: Encoded exam ID
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/check/{encoded_id}:
+ *   get:
+ *     summary: Check exam validity by QR code
+ *     tags: [Health Insurance Exams]
+ *     parameters:
+ *       - in: path
+ *         name: encoded_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Encoded exam ID from QR code
+ *     responses:
+ *       200:
+ *         description: Exam check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/HealthInsuranceExam'
+ *       400:
+ *         description: Invalid QR code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/check-bhyt-date:
+ *   post:
+ *     summary: Check BHYT card validity
+ *     tags: [Health Insurance Exams]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['maThe', 'hoTen', 'ngaySinh']
+ *             properties:
+ *               maThe:
+ *                 type: string
+ *                 description: BHYT card number
+ *               hoTen:
+ *                 type: string
+ *                 description: Full name
+ *               ngaySinh:
+ *                 type: string
+ *                 format: date
+ *                 description: Date of birth
+ *     responses:
+ *       200:
+ *         description: BHYT card check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid BHYT card
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/by-cccd/{cccd}:
+ *   get:
+ *     summary: Get exam by CCCD
+ *     tags: [Health Insurance Exams]
+ *     parameters:
+ *       - in: path
+ *         name: cccd
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Citizen ID number
+ *     responses:
+ *       200:
+ *         description: Exam found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthInsuranceExam'
+ *       404:
+ *         description: Exam not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/health-insurance-exams/{id}:
+ *   get:
+ *     summary: Get exam by ID
+ *     tags: [Health Insurance Exams]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam ID
+ *     responses:
+ *       200:
+ *         description: Exam found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthInsuranceExam'
+ *       404:
+ *         description: Exam not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update exam by ID
+ *     tags: [Health Insurance Exams]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/HealthInsuranceExam'
+ *     responses:
+ *       200:
+ *         description: Exam updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthInsuranceExam'
+ *       404:
+ *         description: Exam not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete exam by ID
+ *     tags: [Health Insurance Exams]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam ID
+ *     responses:
+ *       200:
+ *         description: Exam deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Exam not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/time-slot-templates:
+ *   get:
+ *     summary: Get all time slot templates
+ *     tags: [Time Slot Templates]
+ *     responses:
+ *       200:
+ *         description: List of time slot templates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                   time:
+ *                     type: string
+ *                     description: Time in HH:mm format
+ *                   capacity:
+ *                     type: integer
+ *                     description: Maximum capacity
+ *                   is_active:
+ *                     type: boolean
+ *   post:
+ *     summary: Create time slot template
+ *     tags: [Time Slot Templates]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['time', 'capacity']
+ *             properties:
+ *               time:
+ *                 type: string
+ *                 description: Time in HH:mm format
+ *               capacity:
+ *                 type: integer
+ *                 description: Maximum capacity
+ *     responses:
+ *       201:
+ *         description: Template created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/time-slot-templates/{id}:
+ *   delete:
+ *     summary: Delete time slot template
+ *     tags: [Time Slot Templates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Template ID
+ *     responses:
+ *       200:
+ *         description: Template deleted successfully
+ *       404:
+ *         description: Template not found
+ */
+
+/**
+ * @swagger
+ * /api/khoa-kham:
+ *   get:
+ *     summary: Get all departments with pagination
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of departments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/KhoaKham'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   post:
+ *     summary: Create new department
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/KhoaKham'
+ *     responses:
+ *       201:
+ *         description: Department created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/khoa-kham/active:
+ *   get:
+ *     summary: Get all active departments
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active departments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/KhoaKham'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/khoa-kham/{id}:
+ *   get:
+ *     summary: Get department by ID
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Department ID
+ *     responses:
+ *       200:
+ *         description: Department found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/KhoaKham'
+ *       404:
+ *         description: Department not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update department by ID
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Department ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/KhoaKham'
+ *     responses:
+ *       200:
+ *         description: Department updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/KhoaKham'
+ *       404:
+ *         description: Department not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete department by ID
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Department ID
+ *     responses:
+ *       200:
+ *         description: Department deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Department not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/khoa-kham/{id}/restore:
+ *   patch:
+ *     summary: Restore deleted department
+ *     tags: [Khoa Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Department ID
+ *     responses:
+ *       200:
+ *         description: Department restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Department not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/phong-kham:
+ *   get:
+ *     summary: Get all clinic rooms with pagination
+ *     tags: [Phong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of clinic rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/PhongKham'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   post:
+ *     summary: Create new clinic room
+ *     tags: [Phong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PhongKham'
+ *     responses:
+ *       201:
+ *         description: Clinic room created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/phong-kham/active:
+ *   get:
+ *     summary: Get all active clinic rooms
+ *     tags: [Phong Kham]
+ *     responses:
+ *       200:
+ *         description: List of active clinic rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/PhongKham'
+ */
+
+/**
+ * @swagger
+ * /api/phong-kham/{id}:
+ *   get:
+ *     summary: Get clinic room by ID
+ *     tags: [Phong Kham]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room ID
+ *     responses:
+ *       200:
+ *         description: Clinic room found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PhongKham'
+ *       404:
+ *         description: Clinic room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update clinic room by ID
+ *     tags: [Phong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PhongKham'
+ *     responses:
+ *       200:
+ *         description: Clinic room updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PhongKham'
+ *       404:
+ *         description: Clinic room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete clinic room by ID
+ *     tags: [Phong Kham]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room ID
+ *     responses:
+ *       200:
+ *         description: Clinic room deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Clinic room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/phong-kham/{id}/restore:
+ *   patch:
+ *     summary: Restore deleted clinic room
+ *     tags: [Phong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room ID
+ *     responses:
+ *       200:
+ *         description: Clinic room restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Clinic room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/loai-kham:
+ *   get:
+ *     summary: Get all exam types with pagination
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of exam types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/LoaiKham'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   post:
+ *     summary: Create new exam type
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoaiKham'
+ *     responses:
+ *       201:
+ *         description: Exam type created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/loai-kham/active:
+ *   get:
+ *     summary: Get all active exam types
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active exam types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/LoaiKham'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/loai-kham/{id}:
+ *   get:
+ *     summary: Get exam type by ID
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam type ID
+ *     responses:
+ *       200:
+ *         description: Exam type found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoaiKham'
+ *       404:
+ *         description: Exam type not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update exam type by ID
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam type ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoaiKham'
+ *     responses:
+ *       200:
+ *         description: Exam type updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoaiKham'
+ *       404:
+ *         description: Exam type not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete exam type by ID
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam type ID
+ *     responses:
+ *       200:
+ *         description: Exam type deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Exam type not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/loai-kham/{id}/restore:
+ *   patch:
+ *     summary: Restore deleted exam type
+ *     tags: [Loai Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam type ID
+ *     responses:
+ *       200:
+ *         description: Exam type restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Exam type not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/cong-kham:
+ *   get:
+ *     summary: Get all exam gates with pagination
+ *     tags: [Cong Kham]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of exam gates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/CongKham'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *   post:
+ *     summary: Create new exam gate
+ *     tags: [Cong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CongKham'
+ *     responses:
+ *       201:
+ *         description: Exam gate created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/cong-kham/active:
+ *   get:
+ *     summary: Get all active exam gates
+ *     tags: [Cong Kham]
+ *     responses:
+ *       200:
+ *         description: List of active exam gates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/CongKham'
+ */
+
+/**
+ * @swagger
+ * /api/cong-kham/{id}:
+ *   get:
+ *     summary: Get exam gate by ID
+ *     tags: [Cong Kham]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam gate ID
+ *     responses:
+ *       200:
+ *         description: Exam gate found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CongKham'
+ *       404:
+ *         description: Exam gate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update exam gate by ID
+ *     tags: [Cong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam gate ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CongKham'
+ *     responses:
+ *       200:
+ *         description: Exam gate updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CongKham'
+ *       404:
+ *         description: Exam gate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete exam gate by ID
+ *     tags: [Cong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam gate ID
+ *     responses:
+ *       200:
+ *         description: Exam gate deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Exam gate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/cong-kham/{id}/restore:
+ *   patch:
+ *     summary: Restore deleted exam gate
+ *     tags: [Cong Kham]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Exam gate ID
+ *     responses:
+ *       200:
+ *         description: Exam gate restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Exam gate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/clinic-rooms:
+ *   get:
+ *     summary: Get all clinic room specialties
+ *     tags: [Clinic Rooms]
+ *     responses:
+ *       200:
+ *         description: List of clinic room specialties
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ClinicRoom'
+ *   post:
+ *     summary: Create new clinic room specialty
+ *     tags: [Clinic Rooms]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ClinicRoom'
+ *     responses:
+ *       201:
+ *         description: Clinic room specialty created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/clinic-rooms/{id}:
+ *   get:
+ *     summary: Get clinic room specialty by ID
+ *     tags: [Clinic Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room specialty ID
+ *     responses:
+ *       200:
+ *         description: Clinic room specialty found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClinicRoom'
+ *       404:
+ *         description: Clinic room specialty not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   put:
+ *     summary: Update clinic room specialty by ID
+ *     tags: [Clinic Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room specialty ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ClinicRoom'
+ *     responses:
+ *       200:
+ *         description: Clinic room specialty updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClinicRoom'
+ *       404:
+ *         description: Clinic room specialty not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     summary: Delete clinic room specialty by ID
+ *     tags: [Clinic Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clinic room specialty ID
+ *     responses:
+ *       200:
+ *         description: Clinic room specialty deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Clinic room specialty not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/khoa-kham:
+ *   post:
+ *     summary: Import departments from Excel
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel file (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/phong-kham:
+ *   post:
+ *     summary: Import clinic rooms from Excel
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel file (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/loai-kham:
+ *   post:
+ *     summary: Import exam types from Excel
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel file (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/cong-kham:
+ *   post:
+ *     summary: Import exam gates from Excel
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel file (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/bac-si:
+ *   post:
+ *     summary: Import doctors from Excel
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel file (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/import/khoa-kham/template:
+ *   get:
+ *     summary: Download department import template
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Excel template file
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+
+/**
+ * @swagger
+ * /api/import/phong-kham/template:
+ *   get:
+ *     summary: Download clinic room import template
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Excel template file
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+
+/**
+ * @swagger
+ * /api/import/loai-kham/template:
+ *   get:
+ *     summary: Download exam type import template
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Excel template file
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+
+/**
+ * @swagger
+ * /api/import/cong-kham/template:
+ *   get:
+ *     summary: Download exam gate import template
+ *     tags: [Import]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Excel template file
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+
+/**
+ * @swagger
+ * /api/schedule-slots:
+ *   get:
+ *     summary: Get all schedule slots
+ *     tags: [Schedule Slots]
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by date
+ *       - in: query
+ *         name: IdPhongKham
+ *         schema:
+ *           type: string
+ *         description: Filter by clinic room ID
+ *     responses:
+ *       200:
+ *         description: List of schedule slots
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                   date:
+ *                     type: string
+ *                     format: date
+ *                   timeSlot:
+ *                     type: string
+ *                     description: Time slot in HH:mm format
+ *                   IdPhongKham:
+ *                     type: string
+ *                     description: Clinic room ID
+ *                   capacity:
+ *                     type: integer
+ *                     description: Maximum capacity
+ *                   currentCount:
+ *                     type: integer
+ *                     description: Current booking count
+ *                   is_active:
+ *                     type: boolean
+ *   post:
+ *     summary: Create schedule slot
+ *     tags: [Schedule Slots]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['date', 'timeSlot', 'IdPhongKham', 'capacity']
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               timeSlot:
+ *                 type: string
+ *                 description: Time slot in HH:mm format
+ *               IdPhongKham:
+ *                 type: string
+ *                 description: Clinic room ID
+ *               capacity:
+ *                 type: integer
+ *                 description: Maximum capacity
+ *     responses:
+ *       201:
+ *         description: Schedule slot created successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/schedule-slots/{id}:
+ *   delete:
+ *     summary: Delete schedule slot
+ *     tags: [Schedule Slots]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Schedule slot ID
+ *     responses:
+ *       200:
+ *         description: Schedule slot deleted successfully
+ *       404:
+ *         description: Schedule slot not found
+ */
 
 const specs = swaggerJsdoc(options);
 

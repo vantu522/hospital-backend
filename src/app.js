@@ -20,6 +20,20 @@ app.use("/uploads", express.static("uploads"));
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   explorer: true,
+  swaggerOptions: {
+    authAction: {
+      bearerAuth: {
+        name: 'bearerAuth',
+        schema: {
+          type: 'http',
+          in: 'header',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        },
+        value: ''
+      }
+    }
+  },
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Hospital API Documentation'
 }));

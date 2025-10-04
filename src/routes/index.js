@@ -18,6 +18,7 @@ import loaiKhamRouter from "./loai-kham.router.js";
 import khoaKhamRouter from "./khoa-kham.router.js";
 import phongKhamRouter from "./phong-kham.router.js";
 import congKhamRouter from "./cong-kham.router.js";
+import scheduleSlotRouter from "./schedule-slot.router.js";
 import importRouter from "./import.router.js";
 
 function route(app){
@@ -41,6 +42,7 @@ function route(app){
     app.use('/api/khoa-kham', khoaKhamRouter);
     app.use('/api/phong-kham', phongKhamRouter);
     app.use('/api/cong-kham', congKhamRouter);
+    app.use('/api/schedule-slots', scheduleSlotRouter);
     app.use('/api/import', importRouter);
 }
 
