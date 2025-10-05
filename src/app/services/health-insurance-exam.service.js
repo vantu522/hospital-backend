@@ -855,6 +855,7 @@ class HealthInsuranceExamService {
         IdBenhVien: process.env.ID_BENHVIEN_HIS,
         IdKhoaKham: exam.IdKhoaKham,
         IsDonTiepCCCD: !!exam.CCCD,
+        CMND: exam.CCCD,
         CMNDNoiCap: process.env.NOI_CAP_CCCD_HIS,
         CMNDNgayCap: this.formatDisplayDateTime(exam.CMNDNgayCap, false),
         IsMSTCaNhan: true,
@@ -885,7 +886,6 @@ class HealthInsuranceExamService {
           IsBHYT: !!exam.dmBHYT,
           IsDungTuyen: !!exam.dmBHYT,
           SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
-          CMND: exam.CCCD
         }
         : basePayload;
 
