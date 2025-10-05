@@ -255,7 +255,11 @@ class HealthInsuranceExamService {
         this.bhytResultCache[cccdKey] = cacheData;
       }
       
-      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
+      // Tìm exam đã tồn tại theo dmBHYT.SoBHYT thay vì field BHYT
+      // Vì dmBHYT.SoBHYT luôn lưu mã thẻ mới (sau khi xử lý 003)
+      const existingExam = await healthInsuranceExamRepository.findOne({ 
+        'dmBHYT.SoBHYT': converted.SoBHYT 
+      });
       
       logger.info('BHYT verification successful', {
         operation: 'checkBHYTCard',
