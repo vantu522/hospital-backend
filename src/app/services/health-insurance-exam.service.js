@@ -5,31 +5,34 @@ import https from 'https';
 import logger from '../../config/logger.js';
 
 class HealthInsuranceExamService {
-  
+
   constructor() {
-    // Tự động dọn dẹp session cache mỗi 10 phút
+   
     setInterval(() => {
       this.cleanupBhytResultCache();
-    }, 10 * 60 * 1000);
+    }, 12 * 60 * 60 * 1000);
   }
 
-  // Dọn dẹp cache hết hạn
+  
   cleanupBhytResultCache() {
     const now = Date.now();
     let cleanedCount = 0;
     
     for (const [key, value] of Object.entries(this.bhytResultCache)) {
-      if (value.expiresAt < now) {
+      // Nếu là object với TTL
+      if (typeof value === 'object' && value.expiresAt && value.expiresAt <= now) {
         delete this.bhytResultCache[key];
         cleanedCount++;
       }
+      
     }
     
     if (cleanedCount > 0) {
-      logger.debug('BHYT result cache cleanup completed', {
+      logger.info('BHYT result cache cleanup completed', {
         operation: 'cleanupBhytResultCache',
         cleanedEntries: cleanedCount,
-        remainingEntries: Object.keys(this.bhytResultCache).length
+        remainingEntries: Object.keys(this.bhytResultCache).length,
+        cleanupTime: new Date().toISOString()
       });
     }
   }
@@ -73,7 +76,7 @@ class HealthInsuranceExamService {
     key: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
     rejectUnauthorized: false // dev, prod nên true
   });
-  // Session-based cache for current request only (cleared after use)
+  // Cache kết quả check BHYT thành công (key: maThe)
   bhytResultCache = {};
 
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
@@ -180,18 +183,6 @@ class HealthInsuranceExamService {
     const correlationId = `bhyt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
     
-    // Check bhyt result cache first (same request, multiple validations)
-    const sessionKey = maThe;
-    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
-      logger.info('Using bhyt result cache for BHYT verification', {
-        operation: 'checkBHYTCard',
-        correlationId,
-        source: 'bhyt_result_cache',
-        cacheAge: Date.now() - this.bhytResultCache[sessionKey].createdAt
-      });
-      return this.bhytResultCache[sessionKey].data;
-    }
-
     logger.info('Starting BHYT card verification', {
       operation: 'checkBHYTCard',
       correlationId,
@@ -247,33 +238,24 @@ class HealthInsuranceExamService {
 
     if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
       const converted = this.convertBHYTToThirdParty(response.data);
-
-      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
       
-      // Cache for current session only (5 minutes max - for duplicate checks in same request)
-      const result = existingExam ? 
-        { success: true, data: response.data, converted, existingExam } : 
-        { success: true, data: response.data, converted };
-        
+      // Lưu vào cache với TTL 12 tiếng
       const cacheData = {
-        data: result,
+        data: converted,
         createdAt: Date.now(),
-        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
+        expiresAt: Date.now() + (12 * 60 * 60 * 1000) // 12 tiếng
       };
       
-      // Lưu vào bhytResultCache
-      this.bhytResultCache[sessionKey] = cacheData; // Key: mã thẻ gốc
-      
-      // Cache theo mã thẻ hiện tại nếu khác key gốc (trường hợp 003 redirect)
+      this.bhytResultCache[currentMaThe] = cacheData;
       if (currentMaThe !== maThe) {
-        this.bhytResultCache[currentMaThe] = cacheData;
+        this.bhytResultCache[maThe] = cacheData;
       }
-      
-      // Cache theo CCCD nếu có
       if (converted?.CCCD || converted?.SoCCCD) {
         const cccdKey = converted.CCCD || converted.SoCCCD;
         this.bhytResultCache[cccdKey] = cacheData;
       }
+      
+      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
       
       logger.info('BHYT verification successful', {
         operation: 'checkBHYTCard',
@@ -333,7 +315,7 @@ class HealthInsuranceExamService {
 
     this.templatesCache = {
       data: templates,
-      expiresAt: Date.now() + (12 * 60 * 60 * 1000) // cache 12 tiếng
+      expiresAt: Date.now() + (5 * 60 * 1000) // cache 5 phút
     };
 
     return templates;
@@ -515,43 +497,41 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-  // Get BHYT info from bhyt result cache if available (same request flow)
+  // Lấy thông tin BHYT từ cache (nếu có) và lưu vào data.dmBHYT
     let dmBHYT = null;
-    const sessionKey = data.BHYT || data.CCCD;
-    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
-      const cachedResult = this.bhytResultCache[sessionKey].data;
-      if (cachedResult.success && cachedResult.converted) {
-        dmBHYT = cachedResult.converted;
-        data.dmBHYT = dmBHYT;
-        
-        logger.info('💾 [BHYT] Đã gán dmBHYT vào data để lưu DB', {
-          operation: 'createExam',
-          hasDmBHYT: !!dmBHYT,
-          soBHYT: dmBHYT.SoBHYT,
-          originalBHYT: data.BHYT
-        });
-        
-        // Cập nhật mã thẻ BHYT thành mã thẻ mới (nếu có)
-        if (dmBHYT.SoBHYT && dmBHYT.SoBHYT !== data.BHYT) {
-          logger.info(`🔄 [BHYT] Cập nhật mã thẻ từ ${data.BHYT} sang ${dmBHYT.SoBHYT}`);
-          data.BHYT = dmBHYT.SoBHYT;
-        }
+    const now = Date.now();
+    
+    // Kiểm tra cache với TTL
+    if (data.BHYT && this.bhytResultCache[data.BHYT]) {
+      const cached = this.bhytResultCache[data.BHYT];
+      if (typeof cached === 'object' && cached.data && cached.expiresAt > now) {
+        dmBHYT = cached.data;
+      } else if (typeof cached !== 'object') {
+        // Cache cũ không có TTL, vẫn dùng được
+        dmBHYT = cached;
+      }
+    } else if (data.CCCD && this.bhytResultCache[data.CCCD]) {
+      const cached = this.bhytResultCache[data.CCCD];
+      if (typeof cached === 'object' && cached.data && cached.expiresAt > now) {
+        dmBHYT = cached.data;
+      } else if (typeof cached !== 'object') {
+        // Cache cũ không có TTL, vẫn dùng được
+        dmBHYT = cached;
       }
     }
     
-    // Log warning nếu exam_type là BHYT nhưng không có dmBHYT
-    if (!dmBHYT && data.exam_type === 'BHYT') {
-      logger.warn('⚠️ [BHYT] Exam type là BHYT nhưng không tìm thấy dmBHYT trong cache');
+    if (dmBHYT) {
+      data.dmBHYT = dmBHYT;
     }
   const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
 
   // Kiểm tra xem yêu cầu đang được xử lý hay không
-  if (this.sessionCache[lockKey]) {
+  if (this.bhytResultCache[lockKey]) {
     throw new Error('Yêu cầu đang được xử lý. Vui lòng đợi.');
   }
 
   // Đặt cờ để đánh dấu yêu cầu đang được xử lý
-  this.sessionCache[lockKey] = { createdAt: Date.now(), expiresAt: Date.now() + 30000 };
+  this.bhytResultCache[lockKey] = true;
 
   try {
     // Sử dụng IdPhongKham cho slot và queue logic
@@ -636,7 +616,7 @@ class HealthInsuranceExamService {
     return responseData;
   } finally {
     // Xóa cờ sau khi xử lý xong
-    delete this.sessionCache[lockKey];
+    delete this.bhytResultCache[lockKey];
   }
 }
 
@@ -846,20 +826,9 @@ class HealthInsuranceExamService {
       if (exam.exam_type === 'BHYT') {
         if (exam.dmBHYT) {
           dmBHYT = exam.dmBHYT;
-          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB', {
-            operation: 'pushToHIS',
-            examId: exam._id,
-            hasDmBHYT: !!exam.dmBHYT,
-            soBHYT: exam.dmBHYT.SoBHYT,
-            examBHYT: exam.BHYT
-          });
+          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB');
         } else {
-          logger.warn('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này', {
-            operation: 'pushToHIS',
-            examId: exam._id,
-            examType: exam.exam_type,
-            examBHYT: exam.BHYT
-          });
+          logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này');
         }
       } else {
         logger.info(`🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: ${exam.exam_type}`);
@@ -995,15 +964,25 @@ class HealthInsuranceExamService {
       });
       return { success: false, error: error.message, details: error.response?.data || {} };
     } finally {
-      // Clear session cache for this patient after successful HIS push
-      const sessionKey = `${exam.BHYT || exam.CCCD}_${exam.HoTen}_${exam.NgaySinh}`;
-      if (this.sessionCache[sessionKey]) {
-        delete this.sessionCache[sessionKey];
-        logger.debug('Cleared session cache after HIS push', {
+      // Xóa cache BHYT sau khi push thành công
+      const bhytKey = exam.BHYT;
+      const cccdKey = exam.CCCD;
+      if (bhytKey && this.bhytResultCache[bhytKey]) {
+        delete this.bhytResultCache[bhytKey];
+        logger.debug('Cleared BHYT cache after HIS push', {
           operation: 'pushToHIS',
           correlationId,
-          sessionKey: sessionKey.substring(0, 20) + '***',
-          remainingCacheSize: Object.keys(this.sessionCache).length
+          clearedKey: 'BHYT',
+          remainingCacheSize: Object.keys(this.bhytResultCache).length
+        });
+      }
+      if (cccdKey && this.bhytResultCache[cccdKey]) {
+        delete this.bhytResultCache[cccdKey];
+        logger.debug('Cleared CCCD cache after HIS push', {
+          operation: 'pushToHIS',
+          correlationId,
+          clearedKey: 'CCCD',
+          remainingCacheSize: Object.keys(this.bhytResultCache).length
         });
       }
     }
