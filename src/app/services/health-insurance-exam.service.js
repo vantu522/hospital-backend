@@ -248,27 +248,6 @@ class HealthInsuranceExamService {
     if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
       const converted = this.convertBHYTToThirdParty(response.data);
 
-      // Lưu vào sessionCache với nhiều key để tối ưu tra cứu
-      const cacheData = {
-        data: { success: true, data: response.data, converted },
-        createdAt: Date.now(),
-        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
-      };
-      
-      // Cache theo mã thẻ hiện tại
-      this.sessionCache[`${currentMaThe}_${hoTen}_${ngaySinh}`] = cacheData;
-      
-      // Cache theo mã thẻ gốc nếu khác
-      if (currentMaThe !== maThe) {
-        this.sessionCache[`${maThe}_${hoTen}_${ngaySinh}`] = cacheData;
-      }
-      
-      // Cache theo CCCD nếu có
-      if (converted?.CCCD || converted?.SoCCCD) {
-        const cccdKey = converted.CCCD || converted.SoCCCD;
-        this.sessionCache[`${cccdKey}_${hoTen}_${ngaySinh}`] = cacheData;
-      }
-      
       const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
       
       // Cache for current session only (5 minutes max - for duplicate checks in same request)
@@ -276,11 +255,25 @@ class HealthInsuranceExamService {
         { success: true, data: response.data, converted, existingExam } : 
         { success: true, data: response.data, converted };
         
-      this.sessionCache[sessionKey] = {
+      const cacheData = {
         data: result,
         createdAt: Date.now(),
-        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút - chỉ cho session hiện tại
+        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
       };
+      
+      // Lưu vào sessionCache với nhiều key để tối ưu tra cứu
+      this.sessionCache[sessionKey] = cacheData; // Key gốc: maThe_hoTen_ngaySinh
+      
+      // Cache theo mã thẻ hiện tại nếu khác key gốc
+      if (currentMaThe !== maThe) {
+        this.sessionCache[`${currentMaThe}_${hoTen}_${ngaySinh}`] = cacheData;
+      }
+      
+      // Cache theo CCCD nếu có
+      if (converted?.CCCD || converted?.SoCCCD) {
+        const cccdKey = converted.CCCD || converted.SoCCCD;
+        this.sessionCache[`${cccdKey}_${hoTen}_${ngaySinh}`] = cacheData;
+      }
       
       logger.info('BHYT verification successful', {
         operation: 'checkBHYTCard',
@@ -531,12 +524,24 @@ class HealthInsuranceExamService {
         dmBHYT = cachedResult.converted;
         data.dmBHYT = dmBHYT;
         
+        logger.info('💾 [BHYT] Đã gán dmBHYT vào data để lưu DB', {
+          operation: 'createExam',
+          hasDmBHYT: !!dmBHYT,
+          soBHYT: dmBHYT.SoBHYT,
+          originalBHYT: data.BHYT
+        });
+        
         // Cập nhật mã thẻ BHYT thành mã thẻ mới (nếu có)
         if (dmBHYT.SoBHYT && dmBHYT.SoBHYT !== data.BHYT) {
           logger.info(`🔄 [BHYT] Cập nhật mã thẻ từ ${data.BHYT} sang ${dmBHYT.SoBHYT}`);
           data.BHYT = dmBHYT.SoBHYT;
         }
       }
+    }
+    
+    // Log warning nếu exam_type là BHYT nhưng không có dmBHYT
+    if (!dmBHYT && data.exam_type === 'BHYT') {
+      logger.warn('⚠️ [BHYT] Exam type là BHYT nhưng không tìm thấy dmBHYT trong cache');
     }
   const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
 
@@ -841,9 +846,20 @@ class HealthInsuranceExamService {
       if (exam.exam_type === 'BHYT') {
         if (exam.dmBHYT) {
           dmBHYT = exam.dmBHYT;
-          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB');
+          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB', {
+            operation: 'pushToHIS',
+            examId: exam._id,
+            hasDmBHYT: !!exam.dmBHYT,
+            soBHYT: exam.dmBHYT.SoBHYT,
+            examBHYT: exam.BHYT
+          });
         } else {
-          logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này');
+          logger.warn('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này', {
+            operation: 'pushToHIS',
+            examId: exam._id,
+            examType: exam.exam_type,
+            examBHYT: exam.BHYT
+          });
         }
       } else {
         logger.info(`🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: ${exam.exam_type}`);
