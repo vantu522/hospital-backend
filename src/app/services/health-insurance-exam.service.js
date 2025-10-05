@@ -11,7 +11,7 @@ import logger from '../../config/logger.js';
 
 class HealthInsuranceExamService {
   getNowVN() {
-    return dayjs().tz('Asia/Ho_Chi_Minh').format('HH:mm DD/MM/YYYY');
+    return dayjs().tz('Asia/Ho_Chi_Minh').format('HH:mm MM/DD/YYYY');
   }
 
   formatDisplayDateTime(date, showTimeComponent = true) {
