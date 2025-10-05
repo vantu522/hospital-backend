@@ -247,6 +247,16 @@ class HealthInsuranceExamService {
 
     if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
       const converted = this.convertBHYTToThirdParty(response.data);
+
+      this.bhytResultCache[currentMaThe] = converted;
+
+      if (currentMaThe !== maThe) {
+        this.bhytResultCache[maThe] = converted;
+      }
+      if (converted?.CCCD || converted?.SoCCCD) {
+        const cccdKey = converted.CCCD || converted.SoCCCD;
+        this.bhytResultCache[cccdKey] = converted;
+      }
       
       const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
       
