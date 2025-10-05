@@ -720,7 +720,7 @@ class HealthInsuranceExamService {
           ...basePayload,
           ...(dmBHYT && { DmBHYT: dmBHYT }),
           IsBHYT: !!dmBHYT,
-          IsDungTuyen: dmBHYT && dmBHYT.NoiDKBD === dmBHYT.Domain,
+          IsDungTuyen: exam.dmBHYT && exam.dmBHYT.NoiDKBD === exam.dmBHYT.Domain,
           SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
           CMND: exam.CCCD
         }
