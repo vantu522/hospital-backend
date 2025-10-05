@@ -9,27 +9,27 @@ class HealthInsuranceExamService {
   constructor() {
     // Tự động dọn dẹp session cache mỗi 10 phút
     setInterval(() => {
-      this.cleanupSessionCache();
+      this.cleanupBhytResultCache();
     }, 10 * 60 * 1000);
   }
 
   // Dọn dẹp cache hết hạn
-  cleanupSessionCache() {
+  cleanupBhytResultCache() {
     const now = Date.now();
     let cleanedCount = 0;
     
-    for (const [key, value] of Object.entries(this.sessionCache)) {
+    for (const [key, value] of Object.entries(this.bhytResultCache)) {
       if (value.expiresAt < now) {
-        delete this.sessionCache[key];
+        delete this.bhytResultCache[key];
         cleanedCount++;
       }
     }
     
     if (cleanedCount > 0) {
-      logger.debug('Session cache cleanup completed', {
-        operation: 'cleanupSessionCache',
+      logger.debug('BHYT result cache cleanup completed', {
+        operation: 'cleanupBhytResultCache',
         cleanedEntries: cleanedCount,
-        remainingEntries: Object.keys(this.sessionCache).length
+        remainingEntries: Object.keys(this.bhytResultCache).length
       });
     }
   }
@@ -74,7 +74,7 @@ class HealthInsuranceExamService {
     rejectUnauthorized: false // dev, prod nên true
   });
   // Session-based cache for current request only (cleared after use)
-  sessionCache = {};
+  bhytResultCache = {};
 
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
   convertBHYTToThirdParty(bhytData) {
@@ -180,23 +180,23 @@ class HealthInsuranceExamService {
     const correlationId = `bhyt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
     
-    // Check session cache first (same request, multiple validations)
-    const sessionKey = `${maThe}_${hoTen}_${ngaySinh}`;
-    if (this.sessionCache[sessionKey] && this.sessionCache[sessionKey].expiresAt > Date.now()) {
-      logger.info('Using session cache for BHYT verification', {
+    // Check bhyt result cache first (same request, multiple validations)
+    const sessionKey = maThe;
+    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
+      logger.info('Using bhyt result cache for BHYT verification', {
         operation: 'checkBHYTCard',
         correlationId,
-        source: 'session_cache',
-        cacheAge: Date.now() - this.sessionCache[sessionKey].createdAt
+        source: 'bhyt_result_cache',
+        cacheAge: Date.now() - this.bhytResultCache[sessionKey].createdAt
       });
-      return this.sessionCache[sessionKey].data;
+      return this.bhytResultCache[sessionKey].data;
     }
 
     logger.info('Starting BHYT card verification', {
       operation: 'checkBHYTCard',
       correlationId,
       input: { maThe: maThe?.substring(0, 8) + '***', hoTen, ngaySinh },
-      sessionCacheSize: Object.keys(this.sessionCache).length
+      bhytCacheSize: Object.keys(this.bhytResultCache).length
     });
 
   const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
@@ -261,18 +261,18 @@ class HealthInsuranceExamService {
         expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
       };
       
-      // Lưu vào sessionCache với nhiều key để tối ưu tra cứu
-      this.sessionCache[sessionKey] = cacheData; // Key gốc: maThe_hoTen_ngaySinh
+      // Lưu vào bhytResultCache
+      this.bhytResultCache[sessionKey] = cacheData; // Key: mã thẻ gốc
       
-      // Cache theo mã thẻ hiện tại nếu khác key gốc
+      // Cache theo mã thẻ hiện tại nếu khác key gốc (trường hợp 003 redirect)
       if (currentMaThe !== maThe) {
-        this.sessionCache[`${currentMaThe}_${hoTen}_${ngaySinh}`] = cacheData;
+        this.bhytResultCache[currentMaThe] = cacheData;
       }
       
       // Cache theo CCCD nếu có
       if (converted?.CCCD || converted?.SoCCCD) {
         const cccdKey = converted.CCCD || converted.SoCCCD;
-        this.sessionCache[`${cccdKey}_${hoTen}_${ngaySinh}`] = cacheData;
+        this.bhytResultCache[cccdKey] = cacheData;
       }
       
       logger.info('BHYT verification successful', {
@@ -515,11 +515,11 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-  // Get BHYT info from session cache if available (same request flow)
+  // Get BHYT info from bhyt result cache if available (same request flow)
     let dmBHYT = null;
-    const sessionKey = `${data.BHYT || data.CCCD}_${data.HoTen}_${data.NgaySinh}`;
-    if (this.sessionCache[sessionKey] && this.sessionCache[sessionKey].expiresAt > Date.now()) {
-      const cachedResult = this.sessionCache[sessionKey].data;
+    const sessionKey = data.BHYT || data.CCCD;
+    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
+      const cachedResult = this.bhytResultCache[sessionKey].data;
       if (cachedResult.success && cachedResult.converted) {
         dmBHYT = cachedResult.converted;
         data.dmBHYT = dmBHYT;
