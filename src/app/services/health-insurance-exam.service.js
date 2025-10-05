@@ -248,14 +248,25 @@ class HealthInsuranceExamService {
     if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
       const converted = this.convertBHYTToThirdParty(response.data);
 
-      this.bhytResultCache[currentMaThe] = converted;
-
+      // Lưu vào sessionCache với nhiều key để tối ưu tra cứu
+      const cacheData = {
+        data: { success: true, data: response.data, converted },
+        createdAt: Date.now(),
+        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
+      };
+      
+      // Cache theo mã thẻ hiện tại
+      this.sessionCache[`${currentMaThe}_${hoTen}_${ngaySinh}`] = cacheData;
+      
+      // Cache theo mã thẻ gốc nếu khác
       if (currentMaThe !== maThe) {
-        this.bhytResultCache[maThe] = converted;
+        this.sessionCache[`${maThe}_${hoTen}_${ngaySinh}`] = cacheData;
       }
+      
+      // Cache theo CCCD nếu có
       if (converted?.CCCD || converted?.SoCCCD) {
         const cccdKey = converted.CCCD || converted.SoCCCD;
-        this.bhytResultCache[cccdKey] = converted;
+        this.sessionCache[`${cccdKey}_${hoTen}_${ngaySinh}`] = cacheData;
       }
       
       const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
@@ -519,6 +530,12 @@ class HealthInsuranceExamService {
       if (cachedResult.success && cachedResult.converted) {
         dmBHYT = cachedResult.converted;
         data.dmBHYT = dmBHYT;
+        
+        // Cập nhật mã thẻ BHYT thành mã thẻ mới (nếu có)
+        if (dmBHYT.SoBHYT && dmBHYT.SoBHYT !== data.BHYT) {
+          logger.info(`🔄 [BHYT] Cập nhật mã thẻ từ ${data.BHYT} sang ${dmBHYT.SoBHYT}`);
+          data.BHYT = dmBHYT.SoBHYT;
+        }
       }
     }
   const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
