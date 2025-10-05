@@ -437,6 +437,11 @@ class HealthInsuranceExamService {
     }
     if (dmBHYT) {
       data.dmBHYT = dmBHYT;
+      // Cập nhật mã thẻ BHYT thành mã thẻ mới (nếu có)
+      if (dmBHYT.SoBHYT && dmBHYT.SoBHYT !== data.BHYT) {
+        logger.info(`🔄 [BHYT] Cập nhật mã thẻ từ ${data.BHYT} sang ${dmBHYT.SoBHYT}`);
+        data.BHYT = dmBHYT.SoBHYT;
+      }
     }
     
     const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
