@@ -865,10 +865,10 @@ class HealthInsuranceExamService {
       const payload = exam.exam_type === 'BHYT'
         ? {
           ...basePayload,
-          ...(dmBHYT && { DmBHYT: dmBHYT }),
-          IsBHYT: !!dmBHYT,
-          IsDungTuyen: dmBHYT && dmBHYT.NoiDKBD === dmBHYT.Domain,
-          SoBHYT: dmBHYT ? dmBHYT.SoBHYT : exam.SoBHYT,
+          ...(exam.dmBHYT && { DmBHYT: exam.dmBHYT }),
+          IsBHYT: !!exam.dmBHYT,
+          IsDungTuyen: !!exam.dmBHYT,
+          SoBHYT: exam.dmBHYT ? exam.dmBHYT.SoBHYT : exam.SoBHYT,
           CMND: exam.CCCD
         }
         : basePayload;
