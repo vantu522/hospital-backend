@@ -319,7 +319,7 @@ class HealthInsuranceExamService {
 
     this.templatesCache = {
       data: templates,
-      expiresAt: Date.now() + (5 * 60 * 1000) // cache 5 phút
+      expiresAt: Date.now() + (12 * 60 * 60 * 1000) // cache 12 tiếng
     };
 
     return templates;
