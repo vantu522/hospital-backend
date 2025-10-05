@@ -62,45 +62,100 @@ class DoctorService {
   }
 
   /**
-   * Get all doctors with optional filters
+   * Get all doctors with optional filters and pagination
    */
   async getAllDoctors(filters = {}) {
-  const queryFilters = {};
-  
-  if (filters.specialty) {
-    queryFilters.specialties = filters.specialty;
+    const {
+      specialty,
+      hospital,
+      is_active,
+      page = 1,
+      limit = 10,
+      search
+    } = filters;
+
+    // Build query filters
+    const queryFilters = {};
+    
+    if (specialty) {
+      queryFilters.specialties = specialty;
+    }
+
+    if (hospital) {
+      queryFilters.hospital = { $regex: hospital, $options: 'i' };
+    }
+
+    if (is_active !== undefined) {
+      queryFilters.is_active = is_active === 'true' || is_active === true;
+    }
+
+    // Search functionality
+    if (search) {
+      queryFilters.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { department: { $regex: search, $options: 'i' } },
+        { degree: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Pagination setup
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Định nghĩa thứ tự ưu tiên dựa trên enum
+    const rolePriority = {
+      'GIAM_DOC': 1,
+      'PHO_GIAM_DOC': 2,
+      'TRUONG_PHONG': 3,
+      'TRUONG_KHOA': 4,
+      'PHO_TRUONG_KHOA': 5,
+      'PHO_TRUONG_PHONG': 6,
+      'DIEU_DUONG_TRUONG': 7,
+      'KHAC': 8
+    };
+
+    // Get total count
+    const total = await doctorRepository.count(queryFilters);
+
+    // Get paginated doctors
+    const doctors = await doctorRepository.find(
+      queryFilters,
+      {
+        populate: { path: 'specialties', select: 'name slug' },
+        skip,
+        limit: limitNum,
+        sort: { createdAt: -1 } // Default sort by creation date
+      }
+    );
+
+    // Sort by role priority in memory (since MongoDB can't sort by custom priority)
+    doctors.sort((a, b) => {
+      const roleA = rolePriority[a.role] || 999;
+      const roleB = rolePriority[b.role] || 999;
+      
+      if (roleA !== roleB) {
+        return roleA - roleB;
+      }
+      
+      // If same role, sort by name
+      return a.full_name.localeCompare(b.full_name);
+    });
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    return {
+      data: doctors,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
+      }
+    };
   }
-
-  if (filters.is_active !== undefined) {
-    queryFilters.is_active = filters.is_active;
-  }
-
-  // Định nghĩa thứ tự ưu tiên dựa trên enum
-  const rolePriority = [
-    'GIAM_DOC',
-    'PHO_GIAM_DOC',
-    'TRUONG_PHONG',
-    'TRUONG_KHOA',
-    'PHO_TRUONG_KHOA',
-    'PHO_TRUONG_PHONG',
-    'DIEU_DUONG_TRUONG',
-    'KHAC'
-  ];
-
-  // Lấy danh sách bác sĩ và sắp xếp theo thứ tự ưu tiên
-  const doctors = await doctorRepository.find(queryFilters, {
-    populate: { path: 'specialties', select: 'name slug' }
-  });
-
-  // Sắp xếp danh sách bác sĩ theo thứ tự của rolePriority
-  doctors.sort((a, b) => {
-    const roleA = rolePriority.indexOf(a.role);
-    const roleB = rolePriority.indexOf(b.role);
-    return roleA - roleB;
-  });
-
-  return doctors;
-}
 
   /**
    * Get doctor by slug

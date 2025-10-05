@@ -73,7 +73,7 @@ export const createDoctor = async (req, res) => {
  * @swagger
  * /api/doctors:
  *   get:
- *     summary: Get all doctors
+ *     summary: Get all doctors with pagination
  *     tags: [Doctors]
  *     parameters:
  *       - in: query
@@ -91,9 +91,53 @@ export const createDoctor = async (req, res) => {
  *         schema:
  *           type: boolean
  *         description: Filter by active status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by doctor name or specialties
  *     responses:
  *       200:
- *         description: List of doctors
+ *         description: Paginated list of doctors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     hasNext:
+ *                       type: boolean
+ *                     hasPrev:
+ *                       type: boolean
  *       500:
  *         description: Server error
  */
