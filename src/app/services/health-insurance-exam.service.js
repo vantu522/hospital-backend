@@ -607,7 +607,7 @@ class HealthInsuranceExamService {
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
 
-      logger.info('🔑 [HIS] Đang lấy token mới từ: %s', API_LOGIN_HIS_333);
+      logger.info(`🔑 [HIS] Đang lấy token mới từ: ${API_LOGIN_HIS_333}`);
 
       // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
@@ -624,10 +624,10 @@ class HealthInsuranceExamService {
       // Gửi request với params và agent
       const response = await axios.post(API_LOGIN_HIS_333, params, { headers, httpsAgent: this.agent });
 
-      logger.info('✅ [HIS] Nhận phản hồi từ server HIS: %s', response.status);
+      logger.info(`✅ [HIS] Nhận phản hồi từ server HIS: ${response.status}`);
 
       if (!response.data || !response.data.access_token) {
-        logger.error('❌ [HIS] Phản hồi không có access_token: %o', response.data);
+        logger.error(`❌ [HIS] Phản hồi không có access_token: ${JSON.stringify(response.data)}`);
         throw new Error('Không nhận được access_token từ HIS');
       }
 
@@ -638,11 +638,11 @@ class HealthInsuranceExamService {
         expiresAt: Date.now() + (expiresIn - 60) * 1000
       };
 
-      logger.info('🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau: %d giây', expiresIn);
+      logger.info(`🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau: ${expiresIn} giây`);
       return this.hisTokenCache.access_token;
 
     } catch (error) {
-      logger.error('❌ [HIS] Lỗi khi lấy token HIS: %s', error.message);
+      logger.error(`❌ [HIS] Lỗi khi lấy token HIS: ${error.message}`);
       throw new Error(`Không thể lấy token HIS: ${error.message}`);
     }
   }
@@ -784,7 +784,7 @@ class HealthInsuranceExamService {
 
   // === Lấy tất cả lịch khám với phân trang ===
   async getAllExams(options = {}) {
-    logger.info('🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options: %o', options);
+    logger.info(`🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options: ${JSON.stringify(options)}`);
 
     try {
       // Xử lý tham số đầu vào
@@ -818,11 +818,11 @@ class HealthInsuranceExamService {
       // Lấy dữ liệu từ repository
       const result = await healthInsuranceExamRepository.findAll(queryOptions);
 
-      logger.info('✅ [EXAM_SERVICE] Lấy thành công %d/%d lịch khám', result.data.length, result.total);
+      logger.info(`✅ [EXAM_SERVICE] Lấy thành công ${result.data.length}/${result.total} lịch khám`);
       return result;
 
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám: ${error.message}`);
       throw new Error(`Không thể lấy danh sách lịch khám: ${error.message}`);
     }
   }
@@ -830,7 +830,7 @@ class HealthInsuranceExamService {
   // Helper method để thêm thông tin phòng khám vào danh sách lịch khám
   // === Cập nhật thông tin lịch khám ===
   async updateExam(id, data) {
-    logger.info('🔄 [EXAM_SERVICE] Cập nhật lịch khám: %s', id);
+    logger.info(`🔄 [EXAM_SERVICE] Cập nhật lịch khám: ${id}`);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
@@ -847,17 +847,17 @@ class HealthInsuranceExamService {
 
       const updatedExam = await healthInsuranceExamRepository.update(id, allowedUpdates);
 
-      logger.info('✅ [EXAM_SERVICE] Cập nhật lịch khám thành công: %s', id);
+      logger.info(`✅ [EXAM_SERVICE] Cập nhật lịch khám thành công: ${id}`);
       return updatedExam;
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám: ${error.message}`);
       throw new Error(`Không thể cập nhật lịch khám: ${error.message}`);
     }
   }
 
   // === Xóa lịch khám ===
   async deleteExam(id) {
-    logger.info('🗑️ [EXAM_SERVICE] Xóa lịch khám: %s', id);
+    logger.info(`🗑️ [EXAM_SERVICE] Xóa lịch khám: ${id}`);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
@@ -868,10 +868,10 @@ class HealthInsuranceExamService {
       // Soft delete
       await healthInsuranceExamRepository.remove(id);
 
-      logger.info('✅ [EXAM_SERVICE] Xóa lịch khám thành công: %s', id);
+      logger.info(`✅ [EXAM_SERVICE] Xóa lịch khám thành công: ${id}`);
       return { success: true, message: 'Xóa lịch khám thành công' };
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám: ${error.message}`);
       throw new Error(`Không thể xóa lịch khám: ${error.message}`);
     }
   }
@@ -885,7 +885,7 @@ class HealthInsuranceExamService {
       }
       return exam;
     } catch (error) {
-      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy lịch khám theo ID: %s', error.message);
+      logger.error(`❌ [EXAM_SERVICE] Lỗi khi lấy lịch khám theo ID: ${error.message}`);
       throw new Error(`Không thể lấy lịch khám: ${error.message}`);
     }
   }
