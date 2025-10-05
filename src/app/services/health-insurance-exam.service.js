@@ -5,34 +5,6 @@ import https from 'https';
 import logger from '../../config/logger.js';
 
 class HealthInsuranceExamService {
-  
-  constructor() {
-    // Tự động dọn dẹp session cache mỗi 10 phút
-    setInterval(() => {
-      this.cleanupBhytResultCache();
-    }, 10 * 60 * 1000);
-  }
-
-  // Dọn dẹp cache hết hạn
-  cleanupBhytResultCache() {
-    const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const [key, value] of Object.entries(this.bhytResultCache)) {
-      if (value.expiresAt < now) {
-        delete this.bhytResultCache[key];
-        cleanedCount++;
-      }
-    }
-    
-    if (cleanedCount > 0) {
-      logger.debug('BHYT result cache cleanup completed', {
-        operation: 'cleanupBhytResultCache',
-        cleanedEntries: cleanedCount,
-        remainingEntries: Object.keys(this.bhytResultCache).length
-      });
-    }
-  }
 
   formatDisplayDateTime(date, showTimeComponent = true) {
     if (!date) return '';
@@ -73,7 +45,7 @@ class HealthInsuranceExamService {
     key: process.env.CSS ? Buffer.from(process.env.CSS) : undefined,
     rejectUnauthorized: false // dev, prod nên true
   });
-  // Session-based cache for current request only (cleared after use)
+  // Cache kết quả check BHYT thành công (key: maThe)
   bhytResultCache = {};
 
   // Chuyển đổi dữ liệu BHYT sang format chuẩn cho API bên thứ 3
@@ -177,44 +149,17 @@ class HealthInsuranceExamService {
 
   // === Kiểm tra thẻ BHYT với cơ chế refresh token khi gặp 401 ===
   async checkBHYTCard({ maThe, hoTen, ngaySinh }) {
-    const correlationId = `bhyt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const startTime = Date.now();
-    
-    // Check bhyt result cache first (same request, multiple validations)
-    const sessionKey = maThe;
-    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
-      logger.info('Using bhyt result cache for BHYT verification', {
-        operation: 'checkBHYTCard',
-        correlationId,
-        source: 'bhyt_result_cache',
-        cacheAge: Date.now() - this.bhytResultCache[sessionKey].createdAt
-      });
-      return this.bhytResultCache[sessionKey].data;
-    }
+  logger.info(`🔍 [BHYT_CHECK] Bắt đầu kiểm tra thẻ BHYT: ${JSON.stringify({ maThe, hoTen, ngaySinh })}`);
 
-    logger.info('Starting BHYT card verification', {
-      operation: 'checkBHYTCard',
-      correlationId,
-      input: { maThe: maThe?.substring(0, 8) + '***', hoTen, ngaySinh },
-      bhytCacheSize: Object.keys(this.bhytResultCache).length
-    });
+  logger.info(`🔍 [BHYT_CACHE] Trạng thái cache trước kiểm tra: ${JSON.stringify(Object.keys(this.bhytResultCache))}`);
 
   const { BHYT_USERNAME: username, BHYT_PASSWORD: password, BHYT_HOTENCB: hoTenCb, BHYT_CCCDCB: cccdCb, BHYT_CHECK_URL: bhytCheckUrl } = process.env;
   if (!bhytCheckUrl) {
-    logger.error('BHYT configuration missing', {
-      operation: 'checkBHYTCard',
-      correlationId,
-      error: 'BHYT_CHECK_URL not configured',
-      severity: 'critical'
-    });
+    logger.error('❌ [BHYT_SERVICE] Missing BHYT_CHECK_URL in environment variables');
     return { success: false, message: 'Cấu hình API BHYT không đúng' };
   }
 
-    logger.debug('Retrieving BHYT authentication token', {
-      operation: 'checkBHYTCard',
-      correlationId,
-      step: 'token_retrieval'
-    });
+  logger.info('🔄 [BHYT_SERVICE] Getting token...');
   let { token, id_token } = await this.getBHYTToken();
 
   let currentMaThe = maThe;
@@ -247,59 +192,26 @@ class HealthInsuranceExamService {
 
     if (response.data?.maKetQua === "000" || response.data?.maKetQua === "004") {
       const converted = this.convertBHYTToThirdParty(response.data);
-
-      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
-      
-      // Cache for current session only (5 minutes max - for duplicate checks in same request)
-      const result = existingExam ? 
-        { success: true, data: response.data, converted, existingExam } : 
-        { success: true, data: response.data, converted };
-        
-      const cacheData = {
-        data: result,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + (5 * 60 * 1000) // 5 phút
-      };
-      
-      // Lưu vào bhytResultCache
-      this.bhytResultCache[sessionKey] = cacheData; // Key: mã thẻ gốc
-      
-      // Cache theo mã thẻ hiện tại nếu khác key gốc (trường hợp 003 redirect)
+      logger.info(`✅ [BHYT_CACHE] Lưu dữ liệu vào cache cho mã thẻ: ${currentMaThe}`);
+      this.bhytResultCache[currentMaThe] = converted;
+      logger.info(`✅ [BHYT_CACHE] Danh sách cache hiện tại: ${JSON.stringify(Object.keys(this.bhytResultCache).map(key => ({ key, hasData: !!this.bhytResultCache[key] })))}`);
+      // Gọi API kiểm tra trong DB
       if (currentMaThe !== maThe) {
-        this.bhytResultCache[currentMaThe] = cacheData;
+        this.bhytResultCache[maThe] = converted;
       }
-      
-      // Cache theo CCCD nếu có
       if (converted?.CCCD || converted?.SoCCCD) {
         const cccdKey = converted.CCCD || converted.SoCCCD;
-        this.bhytResultCache[cccdKey] = cacheData;
+        this.bhytResultCache[cccdKey] = converted;
       }
-      
-      logger.info('BHYT verification successful', {
-        operation: 'checkBHYTCard',
-        correlationId,
-        resultCode: response.data.maKetQua,
-        cardUsed: currentMaThe !== maThe ? 'new_card' : 'original_card',
-        cacheKeys: [currentMaThe, maThe, converted?.CCCD].filter(Boolean).length,
-        existingRecord: !!existingExam,
-        duration: Date.now() - startTime,
-        performance: 'success'
-      });
-      
+      const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
       if (existingExam) {
+        logger.info(`✅ [BHYT_CHECK] Tìm thấy bản ghi trong DB với BHYT: ${converted.SoBHYT}`);
         return { success: true, data: response.data, converted, existingExam };
       }
 
       return { success: true, data: response.data, converted };
     } else {
-      logger.warn('BHYT verification failed', {
-        operation: 'checkBHYTCard',
-        correlationId,
-        resultCode: response.data?.maKetQua,
-        reason: response.data?.ghiChu || 'Unknown error',
-        duration: Date.now() - startTime,
-        performance: 'failed'
-      });
+      logger.warn(`❌ [BHYT_CACHE] Không lưu vào cache vì maKetQua: ${response.data?.maKetQua}`);
       return {
         success: false,
         message: response.data?.ghiChu || `CCCD chưa tích hợp BHYT`,
@@ -308,14 +220,7 @@ class HealthInsuranceExamService {
       };
     }
   } catch (err) {
-    logger.error('BHYT verification error', {
-      operation: 'checkBHYTCard',
-      correlationId,
-      error: err.message,
-      stack: err.stack,
-      duration: Date.now() - startTime,
-      severity: 'high'
-    });
+    logger.error(`❌ [BHYT_SERVICE] Lỗi khi check BHYT: ${err.message}`);
     return { success: false, message: err.message };
   }
 }
@@ -333,7 +238,7 @@ class HealthInsuranceExamService {
 
     this.templatesCache = {
       data: templates,
-      expiresAt: Date.now() + (12 * 60 * 60 * 1000) // cache 12 tiếng
+      expiresAt: Date.now() + (5 * 60 * 1000) // cache 5 phút
     };
 
     return templates;
@@ -515,43 +420,25 @@ class HealthInsuranceExamService {
 
   // === Tạo lịch khám với order number logic fixed ===
   async createExam(data) {
-  // Get BHYT info from bhyt result cache if available (same request flow)
+  // Lấy thông tin BHYT từ cache (nếu có) và lưu vào data.dmBHYT
     let dmBHYT = null;
-    const sessionKey = data.BHYT || data.CCCD;
-    if (this.bhytResultCache[sessionKey] && this.bhytResultCache[sessionKey].expiresAt > Date.now()) {
-      const cachedResult = this.bhytResultCache[sessionKey].data;
-      if (cachedResult.success && cachedResult.converted) {
-        dmBHYT = cachedResult.converted;
-        data.dmBHYT = dmBHYT;
-        
-        logger.info('💾 [BHYT] Đã gán dmBHYT vào data để lưu DB', {
-          operation: 'createExam',
-          hasDmBHYT: !!dmBHYT,
-          soBHYT: dmBHYT.SoBHYT,
-          originalBHYT: data.BHYT
-        });
-        
-        // Cập nhật mã thẻ BHYT thành mã thẻ mới (nếu có)
-        if (dmBHYT.SoBHYT && dmBHYT.SoBHYT !== data.BHYT) {
-          logger.info(`🔄 [BHYT] Cập nhật mã thẻ từ ${data.BHYT} sang ${dmBHYT.SoBHYT}`);
-          data.BHYT = dmBHYT.SoBHYT;
-        }
-      }
+    if (data.BHYT && this.bhytResultCache[data.BHYT]) {
+      dmBHYT = this.bhytResultCache[data.BHYT];
+    } else if (data.CCCD && this.bhytResultCache[data.CCCD]) {
+      dmBHYT = this.bhytResultCache[data.CCCD];
     }
-    
-    // Log warning nếu exam_type là BHYT nhưng không có dmBHYT
-    if (!dmBHYT && data.exam_type === 'BHYT') {
-      logger.warn('⚠️ [BHYT] Exam type là BHYT nhưng không tìm thấy dmBHYT trong cache');
+    if (dmBHYT) {
+      data.dmBHYT = dmBHYT;
     }
   const lockKey = `createExam:${data.HoTen}:${data.exam_date}:${data.exam_time}:${data.IdPhongKham}`;
 
   // Kiểm tra xem yêu cầu đang được xử lý hay không
-  if (this.sessionCache[lockKey]) {
+  if (this.bhytResultCache[lockKey]) {
     throw new Error('Yêu cầu đang được xử lý. Vui lòng đợi.');
   }
 
   // Đặt cờ để đánh dấu yêu cầu đang được xử lý
-  this.sessionCache[lockKey] = { createdAt: Date.now(), expiresAt: Date.now() + 30000 };
+  this.bhytResultCache[lockKey] = true;
 
   try {
     // Sử dụng IdPhongKham cho slot và queue logic
@@ -636,7 +523,7 @@ class HealthInsuranceExamService {
     return responseData;
   } finally {
     // Xóa cờ sau khi xử lý xong
-    delete this.sessionCache[lockKey];
+    delete this.bhytResultCache[lockKey];
   }
 }
 
@@ -705,23 +592,11 @@ class HealthInsuranceExamService {
 
   // === Lấy token HIS với caching ===
   async getHISToken() {
-    const correlationId = `his_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const startTime = Date.now();
-    
-    logger.debug('Checking HIS token cache', {
-      operation: 'getHISToken',
-      correlationId,
-      cacheExpiry: this.hisTokenCache.expiresAt ? new Date(this.hisTokenCache.expiresAt).toISOString() : null
-    });
+    logger.info('🔑 [HIS] Kiểm tra token HIS');
 
     // Kiểm tra token cache còn hạn không
     if (this.hisTokenCache.access_token && this.hisTokenCache.expiresAt > Date.now()) {
-      logger.debug('Using cached HIS token', {
-        operation: 'getHISToken',
-        correlationId,
-        source: 'cache',
-        duration: Date.now() - startTime
-      });
+      logger.info('🔑 [HIS] Sử dụng token HIS đã cache');
       return this.hisTokenCache.access_token;
     }
 
@@ -729,25 +604,10 @@ class HealthInsuranceExamService {
       const { API_LOGIN_HIS_333, HIS_ACCOUNT, HIS_PASSWORD, CLIENT_ID_HIS } = process.env;
 
       if (!API_LOGIN_HIS_333 || !HIS_ACCOUNT || !HIS_PASSWORD) {
-        logger.error('HIS configuration incomplete', {
-          operation: 'getHISToken',
-          correlationId,
-          missing: {
-            api_url: !API_LOGIN_HIS_333,
-            account: !HIS_ACCOUNT,
-            password: !HIS_PASSWORD
-          },
-          severity: 'critical'
-        });
         throw new Error('Thiếu thông tin cấu hình kết nối HIS');
       }
 
-      logger.info('Requesting new HIS token', {
-        operation: 'getHISToken',
-        correlationId,
-        endpoint: API_LOGIN_HIS_333,
-        account: HIS_ACCOUNT
-      });
+      logger.info('🔑 [HIS] Đang lấy token mới từ: %s', API_LOGIN_HIS_333);
 
       // Tạo params theo định dạng form-urlencoded
       const params = new URLSearchParams();
@@ -764,22 +624,10 @@ class HealthInsuranceExamService {
       // Gửi request với params và agent
       const response = await axios.post(API_LOGIN_HIS_333, params, { headers, httpsAgent: this.agent });
 
-      logger.info('HIS token request successful', {
-        operation: 'getHISToken',
-        correlationId,
-        statusCode: response.status,
-        hasToken: !!response.data?.access_token,
-        duration: Date.now() - startTime
-      });
+      logger.info('✅ [HIS] Nhận phản hồi từ server HIS: %s', response.status);
 
       if (!response.data || !response.data.access_token) {
-        logger.error('Invalid HIS token response', {
-          operation: 'getHISToken',
-          correlationId,
-          responseData: response.data,
-          statusCode: response.status,
-          severity: 'high'
-        });
+        logger.error('❌ [HIS] Phản hồi không có access_token: %o', response.data);
         throw new Error('Không nhận được access_token từ HIS');
       }
 
@@ -790,42 +638,16 @@ class HealthInsuranceExamService {
         expiresAt: Date.now() + (expiresIn - 60) * 1000
       };
 
-      logger.info('HIS token cached successfully', {
-        operation: 'getHISToken',
-        correlationId,
-        expiresIn: expiresIn,
-        expiresAt: new Date(this.hisTokenCache.expiresAt).toISOString(),
-        duration: Date.now() - startTime,
-        performance: 'success'
-      });
-      
+      logger.info('🔑 [HIS] Đã lấy được token HIS mới, hết hạn sau: %d giây', expiresIn);
       return this.hisTokenCache.access_token;
 
     } catch (error) {
-      logger.error('HIS token request failed', {
-        operation: 'getHISToken',
-        correlationId,
-        error: error.message,
-        stack: error.stack,
-        statusCode: error.response?.status,
-        duration: Date.now() - startTime,
-        severity: 'high'
-      });
+      logger.error('❌ [HIS] Lỗi khi lấy token HIS: %s', error.message);
       throw new Error(`Không thể lấy token HIS: ${error.message}`);
     }
   }
   async pushToHIS(exam) {
-    const correlationId = `his_push_${exam._id}_${Date.now()}`;
-    const startTime = Date.now();
-    
-    logger.info('Starting HIS data push', {
-      operation: 'pushToHIS',
-      correlationId,
-      examId: exam._id,
-      patientName: exam.HoTen,
-      examType: exam.exam_type,
-      clinic: exam.IdPhongKham
-    });
+    logger.info(`🏥 [HIS] Đẩy thông tin lên HIS: ${exam._id}`);
 
     try {
       // 1. Lấy token trước khi gọi API
@@ -846,20 +668,9 @@ class HealthInsuranceExamService {
       if (exam.exam_type === 'BHYT') {
         if (exam.dmBHYT) {
           dmBHYT = exam.dmBHYT;
-          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB', {
-            operation: 'pushToHIS',
-            examId: exam._id,
-            hasDmBHYT: !!exam.dmBHYT,
-            soBHYT: exam.dmBHYT.SoBHYT,
-            examBHYT: exam.BHYT
-          });
+          logger.info('🏥 [HIS] Sử dụng thông tin BHYT từ exam.dmBHYT trong DB');
         } else {
-          logger.warn('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này', {
-            operation: 'pushToHIS',
-            examId: exam._id,
-            examType: exam.exam_type,
-            examBHYT: exam.BHYT
-          });
+          logger.info('🏥 [HIS] Không tìm thấy thông tin BHYT trong DB cho exam này');
         }
       } else {
         logger.info(`🏥 [HIS] Không tìm thông tin BHYT vì exam_type là: ${exam.exam_type}`);
@@ -925,49 +736,22 @@ class HealthInsuranceExamService {
         timeout: 30000
       });
 
-      logger.info('HIS API response received', {
-        operation: 'pushToHIS',
-        correlationId,
-        examId: exam._id,
-        statusCode: response.status,
-        statusText: response.statusText,
-        hasData: !!response.data,
-        soXepHang: response.data?.SoXepHang
-      });
+      logger.info(`✅ [HIS] Phản hồi HIS: ${response.status} ${response.statusText}`);
+      logger.info(`✅ [HIS] Data phản hồi: ${JSON.stringify(response.data)}`);
 
       if (response.data && response.data.statusCode && response.data.statusCode !== 200) {
-        logger.error('HIS API returned error status', {
-          operation: 'pushToHIS',
-          correlationId,
-          examId: exam._id,
-          errorCode: response.data.statusCode,
-          errorDetails: response.data,
-          severity: 'high'
-        });
+        logger.error(`❌ [HIS] API trả về mã lỗi: ${response.data.statusCode}`);
         return { success: false, error: `API HIS trả về mã lỗi: ${response.data.statusCode}`, details: response.data };
       }
 
       if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
-        logger.error('HIS API returned empty response', {
-          operation: 'pushToHIS',
-          correlationId,
-          examId: exam._id,
-          responseData: response.data,
-          severity: 'high'
-        });
+        logger.error('❌ [HIS] API trả về dữ liệu rỗng');
         return { success: false, error: 'API HIS trả về dữ liệu rỗng', details: response.data };
       }
 
-      logger.info('HIS data push successful', {
-        operation: 'pushToHIS',
-        correlationId,
-        examId: exam._id,
-        patientName: exam.HoTen,
-        soXepHang: response.data.SoXepHang,
-        duration: Date.now() - startTime,
-        performance: 'success'
-      });
-      
+      logger.info(`✅ [HIS] Đẩy thông tin HIS thành công: ${exam._id}`);
+
+        
       // Cập nhật trạng thái đã đẩy lên HIS thành công
       setImmediate(async () => {
         try {
@@ -981,51 +765,27 @@ class HealthInsuranceExamService {
       return { success: true, data: response.data };
 
     } catch (error) {
-      logger.error('HIS data push failed', {
-        operation: 'pushToHIS',
-        correlationId,
-        examId: exam._id,
-        patientName: exam.HoTen,
-        error: error.message,
-        stack: error.stack,
-        statusCode: error.response?.status,
-        responseData: error.response?.data,
-        duration: Date.now() - startTime,
-        severity: 'high'
-      });
+      logger.error(`❌ [HIS] Lỗi khi đẩy dữ liệu HIS: ${error.message} | Bệnh nhân: ${exam.HoTen} (ID: ${exam._id})`);
       return { success: false, error: error.message, details: error.response?.data || {} };
     } finally {
-      // Clear session cache for this patient after successful HIS push
-      const sessionKey = `${exam.BHYT || exam.CCCD}_${exam.HoTen}_${exam.NgaySinh}`;
-      if (this.sessionCache[sessionKey]) {
-        delete this.sessionCache[sessionKey];
-        logger.debug('Cleared session cache after HIS push', {
-          operation: 'pushToHIS',
-          correlationId,
-          sessionKey: sessionKey.substring(0, 20) + '***',
-          remainingCacheSize: Object.keys(this.sessionCache).length
-        });
+      // Xóa cache BHYT sau khi push
+      const bhytKey = exam.BHYT;
+      const cccdKey = exam.CCCD;
+      if (bhytKey && this.bhytResultCache[bhytKey]) {
+        delete this.bhytResultCache[bhytKey];
+        logger.info(`🧹 [BHYT_CACHE] Xóa cache BHYT: ${bhytKey}`);
       }
+      if (cccdKey && this.bhytResultCache[cccdKey]) {
+        delete this.bhytResultCache[cccdKey];
+        logger.info(`🧹 [BHYT_CACHE] Xóa cache CCCD: ${cccdKey}`);
+      }
+      logger.info(`🧹 [BHYT_CACHE] Số lượng cache còn lại: ${Object.keys(this.bhytResultCache).length}`);
     }
   }
 
   // === Lấy tất cả lịch khám với phân trang ===
   async getAllExams(options = {}) {
-    const correlationId = `get_exams_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const startTime = Date.now();
-    
-    logger.info('Fetching exam list', {
-      operation: 'getAllExams',
-      correlationId,
-      filters: {
-        page: options.page || 1,
-        limit: options.limit || 10,
-        status: options.status,
-        exam_type: options.exam_type,
-        clinic: options.IdPhongKham,
-        exam_date: options.exam_date
-      }
-    });
+    logger.info('🔍 [EXAM_SERVICE] Lấy danh sách lịch khám với options: %o', options);
 
     try {
       // Xử lý tham số đầu vào
@@ -1059,28 +819,11 @@ class HealthInsuranceExamService {
       // Lấy dữ liệu từ repository
       const result = await healthInsuranceExamRepository.findAll(queryOptions);
 
-      logger.info('Exam list fetched successfully', {
-        operation: 'getAllExams',
-        correlationId,
-        resultCount: result.data.length,
-        totalCount: result.total,
-        page: queryOptions.page,
-        limit: queryOptions.limit,
-        duration: Date.now() - startTime,
-        performance: result.data.length > 0 ? 'success' : 'no_results'
-      });
-      
+      logger.info('✅ [EXAM_SERVICE] Lấy thành công %d/%d lịch khám', result.data.length, result.total);
       return result;
 
     } catch (error) {
-      logger.error('Failed to fetch exam list', {
-        operation: 'getAllExams',
-        correlationId,
-        error: error.message,
-        stack: error.stack,
-        duration: Date.now() - startTime,
-        severity: 'medium'
-      });
+      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy danh sách lịch khám: %s', error.message);
       throw new Error(`Không thể lấy danh sách lịch khám: ${error.message}`);
     }
   }
@@ -1088,25 +831,11 @@ class HealthInsuranceExamService {
   // Helper method để thêm thông tin phòng khám vào danh sách lịch khám
   // === Cập nhật thông tin lịch khám ===
   async updateExam(id, data) {
-    const correlationId = `update_exam_${id}_${Date.now()}`;
-    const startTime = Date.now();
-    
-    logger.info('Starting exam update', {
-      operation: 'updateExam',
-      correlationId,
-      examId: id,
-      updateFields: Object.keys(data)
-    });
+    logger.info('🔄 [EXAM_SERVICE] Cập nhật lịch khám: %s', id);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
       if (!exam) {
-        logger.warn('Exam not found for update', {
-          operation: 'updateExam',
-          correlationId,
-          examId: id,
-          severity: 'medium'
-        });
         throw new Error('Không tìm thấy lịch khám');
       }
 
@@ -1119,119 +848,45 @@ class HealthInsuranceExamService {
 
       const updatedExam = await healthInsuranceExamRepository.update(id, allowedUpdates);
 
-      logger.info('Exam updated successfully', {
-        operation: 'updateExam',
-        correlationId,
-        examId: id,
-        patientName: exam.HoTen,
-        updatedFields: Object.keys(allowedUpdates),
-        duration: Date.now() - startTime,
-        performance: 'success'
-      });
-      
+      logger.info('✅ [EXAM_SERVICE] Cập nhật lịch khám thành công: %s', id);
       return updatedExam;
     } catch (error) {
-      logger.error('Failed to update exam', {
-        operation: 'updateExam',
-        correlationId,
-        examId: id,
-        error: error.message,
-        stack: error.stack,
-        duration: Date.now() - startTime,
-        severity: 'medium'
-      });
+      logger.error('❌ [EXAM_SERVICE] Lỗi khi cập nhật lịch khám: %s', error.message);
       throw new Error(`Không thể cập nhật lịch khám: ${error.message}`);
     }
   }
 
   // === Xóa lịch khám ===
   async deleteExam(id) {
-    const correlationId = `delete_exam_${id}_${Date.now()}`;
-    const startTime = Date.now();
-    
-    logger.info('Starting exam deletion', {
-      operation: 'deleteExam',
-      correlationId,
-      examId: id
-    });
+    logger.info('🗑️ [EXAM_SERVICE] Xóa lịch khám: %s', id);
 
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
       if (!exam) {
-        logger.warn('Exam not found for deletion', {
-          operation: 'deleteExam',
-          correlationId,
-          examId: id,
-          severity: 'medium'
-        });
         throw new Error('Không tìm thấy lịch khám');
       }
 
       // Soft delete
       await healthInsuranceExamRepository.remove(id);
 
-      logger.info('Exam deleted successfully', {
-        operation: 'deleteExam',
-        correlationId,
-        examId: id,
-        patientName: exam.HoTen,
-        examDate: exam.exam_date,
-        duration: Date.now() - startTime,
-        performance: 'success'
-      });
-      
+      logger.info('✅ [EXAM_SERVICE] Xóa lịch khám thành công: %s', id);
       return { success: true, message: 'Xóa lịch khám thành công' };
     } catch (error) {
-      logger.error('Failed to delete exam', {
-        operation: 'deleteExam',
-        correlationId,
-        examId: id,
-        error: error.message,
-        stack: error.stack,
-        duration: Date.now() - startTime,
-        severity: 'medium'
-      });
+      logger.error('❌ [EXAM_SERVICE] Lỗi khi xóa lịch khám: %s', error.message);
       throw new Error(`Không thể xóa lịch khám: ${error.message}`);
     }
   }
 
   // === Lấy thông tin lịch khám theo ID ===
   async getExamById(id) {
-    const correlationId = `get_exam_${id}_${Date.now()}`;
-    const startTime = Date.now();
-    
     try {
       const exam = await healthInsuranceExamRepository.findById(id);
       if (!exam) {
-        logger.warn('Exam not found', {
-          operation: 'getExamById',
-          correlationId,
-          examId: id,
-          duration: Date.now() - startTime,
-          severity: 'low'
-        });
         throw new Error('Không tìm thấy lịch khám');
       }
-      
-      logger.debug('Exam retrieved successfully', {
-        operation: 'getExamById',
-        correlationId,
-        examId: id,
-        patientName: exam.HoTen,
-        status: exam.status,
-        duration: Date.now() - startTime
-      });
-      
       return exam;
     } catch (error) {
-      logger.error('Failed to retrieve exam', {
-        operation: 'getExamById',
-        correlationId,
-        examId: id,
-        error: error.message,
-        duration: Date.now() - startTime,
-        severity: 'low'
-      });
+      logger.error('❌ [EXAM_SERVICE] Lỗi khi lấy lịch khám theo ID: %s', error.message);
       throw new Error(`Không thể lấy lịch khám: ${error.message}`);
     }
   }
