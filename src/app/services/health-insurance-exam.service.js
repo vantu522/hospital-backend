@@ -553,11 +553,11 @@ class HealthInsuranceExamService {
     const examDateTime = new Date(exam.exam_date);
     examDateTime.setHours(h, m, 0, 0);
 
-    if (now < examDateTime) return { valid: false, message: 'Chưa tới giờ khám', exam };
+    if (now < examDateTime) return { success: false, message: 'Chưa tới giờ khám', data: exam };
 
     if ((now - examDateTime) / (1000 * 60) > 15) {
       await healthInsuranceExamRepository.updateOrderNumber(exam._id, null, 'reject');
-      return { valid: false, message: 'Lịch khám bị hủy do tới trễ quá 15 phút', exam };
+      return { success: false, message: 'Lịch khám bị hủy do tới trễ quá 15 phút', data: exam };
     }
 
     if (exam.status !== 'accept') {
@@ -569,9 +569,9 @@ class HealthInsuranceExamService {
         logger.error('❌ [HIS] Lỗi khi đẩy dữ liệu lên HIS sau khi update status:',
           hisResult.details ? JSON.stringify(hisResult.details) : hisResult.error);
         return {
-          valid: true,
+          success: true,
           message: 'Lịch khám hợp lệ, check-in thành công. Lưu ý: Không thể đồng bộ với HIS.',
-          exam,
+          data: exam,
           warning: 'Không thể đồng bộ dữ liệu với HIS. Vui lòng kiểm tra lại sau.'
         };
       }
@@ -593,7 +593,7 @@ class HealthInsuranceExamService {
     }
 
 
-    return { valid: true, message: 'Lịch khám hợp lệ, check-in thành công', exam };
+    return { success: true, message: 'Lịch khám hợp lệ, check-in thành công', data: exam };
   }
 
   // Cache token HIS
