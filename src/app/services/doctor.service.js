@@ -62,22 +62,74 @@ class DoctorService {
   }
 
   /**
-   * Get all doctors with optional filters
+   * Get all doctors with optional filters and pagination
    */
   async getAllDoctors(filters = {}) {
+    const {
+      specialty,
+      hospital,
+      is_active,
+      page = 1,
+      limit = 10,
+      search
+    } = filters;
+
+    // Build query filters
     const queryFilters = {};
     
-    if (filters.specialty) {
-      queryFilters.specialties = filters.specialty;
+    if (specialty) {
+      queryFilters.specialties = specialty;
     }
 
-    if (filters.is_active !== undefined) {
-      queryFilters.is_active = filters.is_active;
+    if (hospital) {
+      queryFilters.hospital = { $regex: hospital, $options: 'i' };
     }
 
-    return await doctorRepository.find(queryFilters, {
-      populate: { path: 'specialties', select: 'name slug' }
-    });
+    if (is_active !== undefined) {
+      queryFilters.is_active = is_active === 'true' || is_active === true;
+    }
+
+    // Search functionality
+    if (search) {
+      queryFilters.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { department: { $regex: search, $options: 'i' } },
+        { degree: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Pagination setup
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count
+    const total = await doctorRepository.count(queryFilters);
+
+    // Get paginated doctors
+    const doctors = await doctorRepository.find(
+      queryFilters,
+      {
+        populate: { path: 'specialties', select: 'name slug' },
+        skip,
+        limit: limitNum,
+        sort: { createdAt: -1 } // Sort by creation date, newest first
+      }
+    );
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    return {
+      data: doctors,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
+      }
+    };
   }
 
   /**
