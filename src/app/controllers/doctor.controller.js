@@ -273,7 +273,7 @@ export const getDoctorsBySpecialty = async (req, res) => {
 
 /**
  * @swagger
- * /api/doctors/random/five:
+ * /api/doctors/five-doctors:
  *   get:
  *     summary: Get five random doctors
  *     tags: [Doctors]
@@ -285,7 +285,7 @@ export const getDoctorsBySpecialty = async (req, res) => {
  */
 export const getFiveRandomDoctors = async (req, res) => {
   try {
-    const doctors = await doctorService.getRandomDoctors(5);
+    const doctors = await doctorService.getFiveRandomDoctors(5);
     res.json(doctors);
   } catch (err) {
     res.status(500).json({ error: err.message });
