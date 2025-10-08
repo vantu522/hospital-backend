@@ -211,7 +211,9 @@ class HealthInsuranceExamService {
           this.bhytResultCache[cccdKey] = converted;
         }
         // Gọi API kiểm tra trong DB
-        const existingExam = await healthInsuranceExamRepository.findOne({ BHYT: converted.SoBHYT });
+        const existingExam = await healthInsuranceExamRepository.findOne({
+          'dmBHYT.SoBHYT': converted.SoBHYT
+        });
         if (existingExam) {
           logger.info(`✅ [BHYT_CHECK] Tìm thấy bản ghi trong DB với BHYT: ${converted.SoBHYT}`);
           return { success: true, data: response.data, converted, existingExam };
