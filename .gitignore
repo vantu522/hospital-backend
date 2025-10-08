@@ -5,7 +5,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Logs
-logs
+logs/
+logs-debug/
+logs-error/
 *.log
 *.out
 *.pid
