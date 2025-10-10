@@ -12,6 +12,7 @@ doctorRouter.post(
   doctorController.createDoctor
 );
 doctorRouter.get("/", doctorController.getAllDoctors);
+doctorRouter.get("/five-doctors", doctorController.getFiveRandomDoctors);
 doctorRouter.get(
   "/specialty/:specialtyId",
   doctorController.getDoctorsBySpecialty
